@@ -21,6 +21,8 @@ const statusEl = document.getElementById("status");
 const liveEl = document.getElementById("live");
 const recallEl = document.getElementById("recall");
 
+const captions = new Map();
+
 let ws;
 
 function numericClientId() {
@@ -33,14 +35,43 @@ function numericClientId() {
   return Number(value);
 }
 
-function appendNaively(msg) {
-  const row = document.createElement("div");
-  row.className = "naive-line";
-  const state = msg.final ? "FINAL" : "PROVISIONAL";
-  row.textContent = `[${state}] segment ${msg.segment} rev ${msg.revision}: ${msg.text}`;
-  liveEl.appendChild(row);
+function handleCaptionUpdate(msg) {
+  const existing = captions.get(msg.segment);
+  if (existing) {
+    if (existing.final) {
+      return;
+    }
+    if (msg.revision <= existing.revision) {
+      return;
+    }
+  }
+  let row;
+  if (existing) {
+    row = existing.element;
+  } else {
+    row = document.createElement("div");
+    liveEl.appendChild(row);
+  }
+  row.className = msg.final ? "caption final" : "caption provisional";
+  row.textContent = msg.text;
+  captions.set(msg.segment, {
+    revision: msg.revision,
+    final: msg.final,
+    text: msg.text,
+    source_ts: msg.source_ts,
+    element: row
+  });
   liveEl.scrollTop = liveEl.scrollHeight;
 }
+
+// function appendNaively(msg) {
+//   const row = document.createElement("div");
+//   row.className = "naive-line";
+//   const state = msg.final ? "FINAL" : "PROVISIONAL";
+//   row.textContent = `[${state}] segment ${msg.segment} rev ${msg.revision}: ${msg.text}`;
+//   liveEl.appendChild(row);
+//   liveEl.scrollTop = liveEl.scrollHeight;
+// }
 
 function connect() {
   statusEl.textContent = "connecting";
@@ -61,7 +92,7 @@ function connect() {
   ws.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === "CAPTION_UPDATE") {
-      appendNaively(msg);
+      handleCaptionUpdate(msg);
     } else if (msg.type === "HISTORY") {
       console.log(`HISTORY with ${msg.items?.length ?? 0} item(s)`, msg);
       // TODO: merge history without stale/duplicate final captions.
