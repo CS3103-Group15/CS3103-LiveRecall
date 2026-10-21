@@ -30,9 +30,12 @@ from typing import Any
 
 import websockets
 
+from server.state import CaptionState
+
 # Naive global set of currently connected student clients.
 # There is deliberately no per-client queue or recovery state here.
 CLIENTS: set[Any] = set()
+CAPTION_STATE = CaptionState(session="L1")
 
 
 async def broadcast_naively(raw_message: str) -> None:
@@ -68,13 +71,21 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
 
             msg_type = msg.get("type")
             if msg_type == "CAPTION_UPDATE":
-                # Baseline behavior: forward exactly what was received.
-                # No history, state, validation, coalescing, or bounded queues.
-                await broadcast_naively(raw)
+                accepted = CAPTION_STATE.accept_update(msg)
+
+                if accepted is None:
+                    continue
+
+                current_update = json.dumps(accepted.to_dict())
+
+                await broadcast_naively(current_update)
             elif msg_type == "SOURCE_DONE":
                 # Test-control message. The specification does not require it
                 # to be forwarded to clients.
-                print("source finished", flush=True)
+                print("source finished: ",
+                      f"accepted={CAPTION_STATE.accepted_count}",
+                      f"rejected={CAPTION_STATE.rejected_count}",
+                      flush=True)
             else:
                 # Forward compatibility: ignore fields/messages this baseline
                 # doesn't understand rather than crashing.
