@@ -30,12 +30,14 @@ from typing import Any
 
 import websockets
 
+from server.history import FinalHistory
 from server.state import CaptionState
 
 # Naive global set of currently connected student clients.
 # There is deliberately no per-client queue or recovery state here.
 CLIENTS: set[Any] = set()
 CAPTION_STATE = CaptionState(session="L1")
+FINAL_HISTORY = FinalHistory()
 
 
 async def broadcast_naively(raw_message: str) -> None:
@@ -75,6 +77,9 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
 
                 if accepted is None:
                     continue
+
+                if accepted.final:
+                    FINAL_HISTORY.add(accepted)
 
                 current_update = json.dumps(accepted.to_dict())
 
