@@ -22,6 +22,10 @@ const liveEl = document.getElementById("live");
 const recallEl = document.getElementById("recall");
 
 const captions = new Map();
+const finalizedHistory = new Map();
+
+const LOCAL_RETENTION_SECONDS = 70
+const LIVE_DISPLAY_SECONDS = 15;
 
 let ws;
 
@@ -33,6 +37,48 @@ function numericClientId() {
     sessionStorage.setItem(key, value);
   }
   return Number(value);
+}
+
+function remove_old_entries() {
+    const now = Date.now() / 1000;
+    const cutoff = now - LOCAL_RETENTION_SECONDS;
+
+    for (const [segment, caption] of finalizedHistory) {
+        if (caption.source_ts < cutoff) {
+            finalizedHistory.delete(segment);
+        }
+    }
+
+    const liveCutoff = now - LIVE_DISPLAY_SECONDS;
+
+    for (const [segment, caption] of captions) {
+        if (caption.final && caption.source_ts < liveCutoff) {
+            caption.element.remove();
+            captions.delete(segment);
+        }
+    }
+}
+
+function storeFinalCaption(msg) {
+    if (!msg.final) {
+        return;
+    }
+
+    const existing = finalizedHistory.get(msg.segment);
+
+    if (existing) {
+        return;
+    }
+
+    finalizedHistory.set(msg.segment, {
+        segment: msg.segment,
+        revision: msg.revision,
+        source_ts: msg.source_ts,
+        text: msg.text,
+        final: true
+    });
+
+    remove_old_entries();
 }
 
 function handleCaptionUpdate(msg) {
@@ -61,7 +107,57 @@ function handleCaptionUpdate(msg) {
     source_ts: msg.source_ts,
     element: row
   });
+  if (msg.final) {
+    storeFinalCaption(msg);
+  }
+  // const shouldAutoScroll = liveEl.scrollHeight - liveEl.scrollTop - liveEl.clientHeight < 40;
+  // if (shouldAutoScroll) {
+  //   liveEl.scrollTop = liveEl.scrollHeight;
+  // }
   liveEl.scrollTop = liveEl.scrollHeight;
+}
+
+function getRecentCaptions(seconds) {
+    remove_old_entries();
+
+    const now = Date.now() / 1000;
+    const cutoff = now - seconds;
+
+    return Array.from(finalizedHistory.values())
+        .filter(caption => caption.source_ts >= cutoff)
+        .sort((a, b) => a.segment - b.segment);
+}
+
+
+function showRecall(seconds = 30) {
+    const recent = getRecentCaptions(seconds);
+
+    // Clear the previous recall display.
+    recallEl.replaceChildren();
+
+    if (recent.length === 0) {
+        recallEl.textContent =
+            `No finalized captions in the last ${seconds} seconds.`;
+        return;
+    }
+
+    for (const caption of recent) {
+        const row = document.createElement("div");
+        row.className = "recall-caption";
+
+        const timestamp = document.createElement("span");
+        timestamp.className = "recall-time";
+
+        timestamp.textContent =
+            new Date(caption.source_ts * 1000)
+                .toLocaleTimeString();
+
+        const text = document.createElement("span");
+        text.textContent = caption.text;
+
+        row.append(timestamp, text);
+        recallEl.appendChild(row);
+    }
 }
 
 // function appendNaively(msg) {
@@ -112,8 +208,9 @@ function connect() {
 for (const button of document.querySelectorAll("button[data-seconds]")) {
   button.addEventListener("click", () => {
     const seconds = Number(button.dataset.seconds);
-    recallEl.textContent = `TODO: show finalized captions from the previous ${seconds} seconds using local state.`;
+    showRecall(seconds);
   });
 }
 
 connect();
+setInterval(remove_old_entries, 3000);
