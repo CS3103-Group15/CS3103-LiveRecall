@@ -39,6 +39,7 @@ CLIENTS: set[Any] = set()
 CAPTION_STATE = CaptionState(session="L1")
 FINAL_HISTORY = FinalHistory()
 
+DELIVERY_LOCK = asyncio.Lock()
 
 async def broadcast_naively(raw_message: str) -> None:
     """Send one message directly to every connected client.
@@ -47,17 +48,18 @@ async def broadcast_naively(raw_message: str) -> None:
     sends to complete. Under pressure, this design may accumulate delay and is
     not the target architecture for the assignment.
     """
-    if not CLIENTS:
-        return
+    async with DELIVERY_LOCK:
+        if not CLIENTS:
+            return
 
-    snapshot = list(CLIENTS)
-    results = await asyncio.gather(
-        *(client.send(raw_message) for client in snapshot),
-        return_exceptions=True,
-    )
-    for client, result in zip(snapshot, results):
-        if isinstance(result, Exception):
-            CLIENTS.discard(client)
+        snapshot = list(CLIENTS)
+        results = await asyncio.gather(
+            *(client.send(raw_message) for client in snapshot),
+            return_exceptions=True,
+        )
+        for client, result in zip(snapshot, results):
+            if isinstance(result, Exception):
+                CLIENTS.discard(client)
 
 
 async def handle_source(ws, hello: dict[str, Any]) -> None:
@@ -99,23 +101,65 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
         print("source disconnected", flush=True)
 
 
+def parse_client_resume(hello:dict[str, Any]) -> tuple[int, int, int]:
+    last_segment = hello.get("last_segment")
+    last_revision = hello.get("last_revision")
+    history_seconds = hello.get("history_seconds")
+
+    if type(last_segment) is not int or last_segment < 0:
+        last_segment = 0
+
+    if type(last_revision) is not int or last_revision < 0:
+        last_revision = 0
+
+    if type(history_seconds) is not int or 60 < history_seconds < 0:
+        history_seconds = 30
+
+    return last_segment, last_revision, history_seconds
+
 async def handle_client(ws, hello: dict[str, Any]) -> None:
     client_id = hello.get("client_id")
 
-    # The baseline has no stored recovery state. Sending an empty HISTORY makes
-    # the connection behavior visible and keeps the starter easy to inspect.
-    # Students must implement correct HISTORY semantics for the assignment.
-    await ws.send(json.dumps({"type": "HISTORY", "items": []}))
+    if hello.get("session") != "L1":
+        await ws.close(code=1008, reason="Invalid session")
+        return
 
-    CLIENTS.add(ws)
-    print(f"client connected: id={client_id}; clients={len(CLIENTS)}", flush=True)
+    last_segment, last_revision, history_seconds = parse_client_resume(hello)
+
+    registered = False
+
     try:
-        # Student clients normally don't send further messages after hello.
-        # Keep the WebSocket open until the client disconnects.
+        # Prevent concurrent live broadcasts from overtaking
+        # the initial HISTORY response.
+        async with DELIVERY_LOCK:
+            history_items = FINAL_HISTORY.get_recent(
+                seconds=history_seconds,
+                last_segment=last_segment,
+                last_revision=last_revision,
+            )
+
+            await ws.send(json.dumps({
+                "type": "HISTORY",
+                "items": history_items,
+            }))
+
+            # Registration occurs before releasing the lock.
+            CLIENTS.add(ws)
+            registered = True
+
+        print(
+            f"client connected: id={client_id}; "
+            f"recovered={len(history_items)}; "
+            f"clients={len(CLIENTS)}",
+            flush=True,
+        )
+
+        # Keep the client connection open.
         async for _ in ws:
             pass
     finally:
-        CLIENTS.discard(ws)
+        if registered:
+            CLIENTS.discard(ws)
         print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}", flush=True)
 
 

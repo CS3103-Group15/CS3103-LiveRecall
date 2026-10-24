@@ -29,6 +29,17 @@ const LIVE_DISPLAY_SECONDS = 15;
 
 let ws;
 
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+
+let lastFinalSegment = 0;
+let lastFinalRevision = 0;
+
+const HISTORY_REQUEST_SECONDS = 60;
+
+const BASE_RECONNECT_MS = 500;
+const MAX_RECONNECT_MS = 5000;
+
 function numericClientId() {
   const key = "liverecall-client-id";
   let value = sessionStorage.getItem(key);
@@ -81,7 +92,24 @@ function storeFinalCaption(msg) {
     remove_old_entries();
 }
 
+
+function updateFinalCheckpoint(msg) {
+    if (!msg.final) {
+        return;
+    }
+
+    if (msg.segment > lastFinalSegment || (msg.segment === lastFinalSegment && msg.revision > lastFinalRevision)) {
+        lastFinalSegment = msg.segment;
+        lastFinalRevision = msg.revision;
+    }
+}
+
+
 function handleCaptionUpdate(msg) {
+  if (msg.segment <= lastFinalSegment) {
+    return;
+  }
+
   const existing = captions.get(msg.segment);
   if (existing) {
     if (existing.final) {
@@ -91,24 +119,43 @@ function handleCaptionUpdate(msg) {
       return;
     }
   }
-  let row;
-  if (existing) {
-    row = existing.element;
-  } else {
-    row = document.createElement("div");
-    liveEl.appendChild(row);
+
+  const now = Date.now() / 1000;
+  const liveCutoff = now - LIVE_DISPLAY_SECONDS;
+  const shouldDisplayLive = msg.source_ts >= liveCutoff;
+
+  let row = existing?.element ?? null;
+
+  if (shouldDisplayLive) {
+    if (!row) {
+        row = document.createElement("div");
+        liveEl.appendChild(row);
+    }
+
+    row.className = msg.final
+        ? "caption final"
+        : "caption provisional";
+
+    row.textContent = msg.text;
+  } else if (row) {
+    row.remove();
+    row = null;
   }
-  row.className = msg.final ? "caption final" : "caption provisional";
-  row.textContent = msg.text;
-  captions.set(msg.segment, {
-    revision: msg.revision,
-    final: msg.final,
-    text: msg.text,
-    source_ts: msg.source_ts,
-    element: row
-  });
+
+  if (row) {
+        captions.set(msg.segment, {
+            revision: msg.revision,
+            final: msg.final,
+            text: msg.text,
+            source_ts: msg.source_ts,
+            element: row
+        });
+    } else {
+        captions.delete(msg.segment);
+    }
   if (msg.final) {
     storeFinalCaption(msg);
+    updateFinalCheckpoint(msg);
   }
   // const shouldAutoScroll = liveEl.scrollHeight - liveEl.scrollTop - liveEl.clientHeight < 40;
   // if (shouldAutoScroll) {
@@ -160,6 +207,20 @@ function showRecall(seconds = 30) {
     }
 }
 
+
+function handleHistory(msg) {
+    for (const item of msg.items) {
+        if (!item || item.final !== true) {
+            continue;
+        }
+
+        handleCaptionUpdate(item);
+    }
+
+    console.log(`Recovered ${msg.items.length} history item(s)`);
+}
+
+
 // function appendNaively(msg) {
 //   const row = document.createElement("div");
 //   row.className = "naive-line";
@@ -169,19 +230,54 @@ function showRecall(seconds = 30) {
 //   liveEl.scrollTop = liveEl.scrollHeight;
 // }
 
+function scheduleReconnect() {
+    if (reconnectTimer !== null) {
+        return;
+    }
+
+    const exponentialDelay = Math.min(
+        BASE_RECONNECT_MS * (2 ** reconnectAttempts),
+        MAX_RECONNECT_MS
+    );
+
+    // Small random jitter prevents many clients
+    // reconnecting at exactly the same moment.
+    const delay = exponentialDelay * (
+        0.8 + Math.random() * 0.4
+    );
+
+    reconnectAttempts += 1;
+
+    statusEl.textContent = "reconnecting";
+
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+    }, delay);
+}
+
 function connect() {
-  statusEl.textContent = "connecting";
+  statusEl.textContent =
+        reconnectAttempts > 0
+            ? "reconnecting"
+            : "connecting";
+
   ws = new WebSocket(WS_URL);
 
   ws.addEventListener("open", () => {
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    reconnectAttempts = 0;
     statusEl.textContent = "connected";
     ws.send(JSON.stringify({
       type: "CLIENT_HELLO",
       client_id: numericClientId(),
       session: "L1",
-      last_segment: 0,       // TODO: resume latest finalized state
-      last_revision: 0,
-      history_seconds: 30
+      last_segment: lastFinalSegment,
+      last_revision: lastFinalRevision,
+      history_seconds: HISTORY_REQUEST_SECONDS
     }));
   });
 
@@ -190,18 +286,18 @@ function connect() {
     if (msg.type === "CAPTION_UPDATE") {
       handleCaptionUpdate(msg);
     } else if (msg.type === "HISTORY") {
-      console.log(`HISTORY with ${msg.items?.length ?? 0} item(s)`, msg);
-      // TODO: merge history without stale/duplicate final captions.
+      handleHistory(msg);
     }
   });
 
   ws.addEventListener("close", () => {
     statusEl.textContent = "disconnected";
-    // TODO: automatic reconnect after a short delay, using finalized resume state.
+    scheduleReconnect();
   });
 
   ws.addEventListener("error", () => {
     statusEl.textContent = "connection error";
+    ws.close()
   });
 }
 
