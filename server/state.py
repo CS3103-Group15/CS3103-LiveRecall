@@ -1,5 +1,5 @@
 import math
-from typing import Any
+from typing import Any, Callable
 
 class CaptionUpdate:
     def __init__(self, session:str, segment:int, revision:int, source_ts:float, final:bool, text:str):
@@ -29,7 +29,8 @@ class CaptionState:
         self.accepted_count = 0
         self.rejected_count = 0
 
-    def accept_update(self, message:dict[str, Any]) -> CaptionUpdate | None:
+    def accept_update(self, message:dict[str, Any],
+                      store_final: Callable[[CaptionUpdate], None] | None = None) -> CaptionUpdate | None:
         caption_update = self.parse_update(message)
 
         if caption_update is None:
@@ -48,6 +49,9 @@ class CaptionState:
                 return None
 
         if caption_update.final:
+            # Store before committing state so capacity failures leave it retryable.
+            if store_final is not None:
+                store_final(caption_update)
             self.highest_finalized_segment = caption_update.segment
             self.active.pop(caption_update.segment, None)
         else:

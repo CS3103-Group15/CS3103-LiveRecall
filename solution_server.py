@@ -1,24 +1,9 @@
 #!/usr/bin/env python3
-"""
-CS3103 Assignment 4 - LiveRecall naive working baseline.
+"""LiveRecall server with revision validation, recovery and isolated delivery.
 
-This starter is intentionally useful but incomplete. It provides the required
-CLI and a basic WebSocket broadcaster so that caption_source.py -> server ->
-browser/load clients works on day one.
-
-It DOES NOT implement the graded networking mechanisms:
-  - revision-state management or deduplication
-  - recent-history recovery or late-join recovery
-  - bounded per-client application queues
-  - slow-client isolation
-  - semantic coalescing / backpressure
-  - constrained-bandwidth overload handling
-
-Required evaluator command:
-    python solution_server.py --port 8765
-
-Teams should replace or substantially extend the implementation while keeping
-this command-line interface and the protocol in the assignment specification.
+Run: python solution_server.py --port 8765
+Stage 5 bounds each client's provisional queue and reads finals from shared
+history. Semantic coalescing and overload recovery tuning remain stage 6.
 """
 
 from __future__ import annotations
@@ -30,39 +15,19 @@ from typing import Any
 
 import websockets
 
+from server.delivery import ClientDelivery
 from server.history import FinalHistory
 from server.state import CaptionState
 
-# Naive global set of currently connected student clients.
-# There is deliberately no per-client queue or recovery state here.
-CLIENTS: set[Any] = set()
+CLIENTS: set[ClientDelivery] = set()
 CAPTION_STATE = CaptionState(session="L1")
 FINAL_HISTORY = FinalHistory()
 
-DELIVERY_LOCK = asyncio.Lock()
 
-
-async def broadcast_naively(raw_message: str) -> None:
-    """Send one message directly to every connected client.
-
-    This is intentionally a naive baseline. The source handler waits for all
-    sends to complete. Under pressure, this design may accumulate delay and is
-    not the target architecture for the assignment.
-    """
-    async with DELIVERY_LOCK:
-        if not CLIENTS:
-            return
-
-        snapshot = list(CLIENTS)
-
-        results = await asyncio.gather(
-            *(client.send(raw_message) for client in snapshot),
-            return_exceptions=True,
-        )
-
-        for client, result in zip(snapshot, results):
-            if isinstance(result, Exception):
-                CLIENTS.discard(client)
+def publish(caption) -> None:
+    raw = json.dumps(caption.to_dict())
+    for client in tuple(CLIENTS):
+        client.offer(caption, raw)
 
 
 async def handle_source(ws, hello: dict[str, Any]) -> None:
@@ -78,17 +43,19 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
 
             msg_type = msg.get("type")
             if msg_type == "CAPTION_UPDATE":
-                accepted = CAPTION_STATE.accept_update(msg)
+                try:
+                    accepted = CAPTION_STATE.accept_update(msg, FINAL_HISTORY.add)
+                except OverflowError:
+                    # Do not commit a final that cannot be retained.
+                    await ws.close(code=1013, reason="Final history capacity exhausted")
+                    return
 
                 if accepted is None:
                     continue
 
-                if accepted.final:
-                    FINAL_HISTORY.add(accepted)
-
-                current_update = json.dumps(accepted.to_dict())
-
-                await broadcast_naively(current_update)
+                publish(accepted)
+                # Explicit fairness even when buffered source reads don't yield.
+                await asyncio.sleep(0)
             elif msg_type == "SOURCE_DONE":
                 # Test-control message. The specification does not require it
                 # to be forwarded to clients.
@@ -133,40 +100,24 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
 
     last_segment, last_revision, history_seconds = parse_client_resume(hello)
 
-    registered = False
-
+    # Snapshot, cursor capture and registration contain no await, so source
+    # processing cannot interleave and create a history/live gap.
+    history_items = FINAL_HISTORY.get_recent(
+        seconds=history_seconds,
+        last_segment=last_segment,
+        last_revision=last_revision,
+    )
+    delivery = ClientDelivery(ws, FINAL_HISTORY, history_items)
+    CLIENTS.add(delivery)
+    delivery.start()
+    print(f"client connected: id={client_id}; recovered={len(history_items)}; "
+          f"clients={len(CLIENTS)}", flush=True)
     try:
-        # Prevent concurrent live broadcasts from overtaking
-        # the initial HISTORY response.
-        async with DELIVERY_LOCK:
-            history_items = FINAL_HISTORY.get_recent(
-                seconds=history_seconds,
-                last_segment=last_segment,
-                last_revision=last_revision,
-            )
-
-            await ws.send(json.dumps({
-                "type": "HISTORY",
-                "items": history_items,
-            }))
-
-            # Registration occurs before releasing the lock.
-            CLIENTS.add(ws)
-            registered = True
-
-        print(
-            f"client connected: id={client_id}; "
-            f"recovered={len(history_items)}; "
-            f"clients={len(CLIENTS)}",
-            flush=True,
-        )
-
-        # Keep the client connection open.
         async for _ in ws:
             pass
     finally:
-        if registered:
-            CLIENTS.discard(ws)
+        CLIENTS.discard(delivery)
+        await delivery.close()
         print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}", flush=True)
 
 
@@ -195,8 +146,10 @@ async def main_async(port: int) -> None:
         max_size=2**20,
         ping_interval=20,
         ping_timeout=20,
+        close_timeout=2,
+        write_limit=32768,
     ):
-        print(f"LiveRecall baseline listening on ws://0.0.0.0:{port}", flush=True)
+        print(f"LiveRecall listening on ws://0.0.0.0:{port}", flush=True)
         await asyncio.Future()
 
 
