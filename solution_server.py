@@ -41,6 +41,7 @@ FINAL_HISTORY = FinalHistory()
 
 DELIVERY_LOCK = asyncio.Lock()
 
+
 async def broadcast_naively(raw_message: str) -> None:
     """Send one message directly to every connected client.
 
@@ -53,10 +54,12 @@ async def broadcast_naively(raw_message: str) -> None:
             return
 
         snapshot = list(CLIENTS)
+
         results = await asyncio.gather(
             *(client.send(raw_message) for client in snapshot),
             return_exceptions=True,
         )
+
         for client, result in zip(snapshot, results):
             if isinstance(result, Exception):
                 CLIENTS.discard(client)
@@ -112,10 +115,14 @@ def parse_client_resume(hello:dict[str, Any]) -> tuple[int, int, int]:
     if type(last_revision) is not int or last_revision < 0:
         last_revision = 0
 
-    if type(history_seconds) is not int or 60 < history_seconds < 0:
+    if type(history_seconds) is not int or history_seconds < 0:
         history_seconds = 30
 
+    if history_seconds > 60:
+        history_seconds = 60
+
     return last_segment, last_revision, history_seconds
+
 
 async def handle_client(ws, hello: dict[str, Any]) -> None:
     client_id = hello.get("client_id")
@@ -197,6 +204,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
+    
     try:
         asyncio.run(main_async(args.port))
     except KeyboardInterrupt:
