@@ -1,10 +1,10 @@
 from collections import deque
 import time
 
-from server.state import CaptionUpdate
+from server.state import CaptionSegment
 
 class FinalEntry:
-    def __init__(self, caption:CaptionUpdate, stored_at:float):
+    def __init__(self, caption:CaptionSegment, stored_at:float):
         self.caption = caption
         self.stored_at = stored_at
 
@@ -14,10 +14,10 @@ class FinalHistory:
         self.max_items = max_items
 
         self.items:deque[FinalEntry] = deque()
-        self.latest_segment = 0
+        self.latest_segment_id = 0
 
-    def add(self, caption:CaptionUpdate) -> None:
-        if caption.segment <= self.latest_segment:
+    def add(self, caption:CaptionSegment) -> None:
+        if caption.segment_id <= self.latest_segment_id:
             return
 
         now = time.monotonic()
@@ -32,7 +32,7 @@ class FinalHistory:
         self.items.append(
             FinalEntry(caption=caption, stored_at=now)
         )
-        self.latest_segment = caption.segment
+        self.latest_segment_id = caption.segment_id
 
     def remove_old_entries(self, now:float|None=None) -> None:
         if now is None:
@@ -55,7 +55,7 @@ class FinalHistory:
             if caption.source_ts < cutoff:
                 continue
 
-            if (caption.segment < last_segment or (caption.segment == last_segment and caption.revision <= last_revision)):
+            if (caption.segment_id < last_segment or (caption.segment_id == last_segment and caption.revision <= last_revision)):
                 continue
 
             result.append(caption.to_dict())

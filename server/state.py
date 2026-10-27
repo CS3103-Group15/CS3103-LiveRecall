@@ -1,10 +1,10 @@
 import math
 from typing import Any
 
-class CaptionUpdate:
+class CaptionSegment:
     def __init__(self, session:str, segment:int, revision:int, source_ts:float, final:bool, text:str):
         self.session = session
-        self.segment = segment
+        self.segment_id = segment
         self.revision = revision
         self.source_ts = source_ts
         self.final = final
@@ -14,7 +14,7 @@ class CaptionUpdate:
         return {
             "type": "CAPTION_UPDATE",
             "session": self.session,
-            "segment": self.segment,
+            "segment": self.segment_id,
             "revision": self.revision,
             "source_ts": self.source_ts,
             "final": self.final,
@@ -24,23 +24,23 @@ class CaptionUpdate:
 class CaptionState:
     def __init__(self, session:str):
         self.session = session
-        self.active: dict[int, CaptionUpdate] = {} # Latest provisional caption for each active segment
+        self.active: dict[int, CaptionSegment] = {} # Latest provisional caption for each active segment
         self.highest_finalized_segment = 0 # Largest finalized segment ID
         self.accepted_count = 0
         self.rejected_count = 0
 
-    def accept_update(self, message:dict[str, Any]) -> CaptionUpdate | None:
+    def accept_update(self, message:dict[str, Any]) -> CaptionSegment | None:
         caption_update = self.parse_update(message)
 
         if caption_update is None:
             self.rejected_count += 1
             return None
 
-        if caption_update.segment <= self.highest_finalized_segment:
+        if caption_update.segment_id <= self.highest_finalized_segment:
             self.rejected_count += 1
             return None
 
-        previous = self.active.get(caption_update.segment)
+        previous = self.active.get(caption_update.segment_id)
 
         if previous is not None:
             if caption_update.revision <= previous.revision:
@@ -48,15 +48,15 @@ class CaptionState:
                 return None
 
         if caption_update.final:
-            self.highest_finalized_segment = caption_update.segment
-            self.active.pop(caption_update.segment, None)
+            self.highest_finalized_segment = caption_update.segment_id
+            self.active.pop(caption_update.segment_id, None)
         else:
-            self.active[caption_update.segment] = caption_update
+            self.active[caption_update.segment_id] = caption_update
 
         self.accepted_count += 1
         return caption_update
 
-    def parse_update(self, message:dict[str, Any]) -> CaptionUpdate | None:
+    def parse_update(self, message:dict[str, Any]) -> CaptionSegment | None:
         if message.get("type") != "CAPTION_UPDATE":
             return None
 
@@ -88,7 +88,7 @@ class CaptionState:
         ):
             return None
 
-        return CaptionUpdate(
+        return CaptionSegment(
             session=self.session,
             segment=segment,
             revision=revision,
