@@ -105,6 +105,13 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
 
 
 def parse_client_resume(hello:dict[str, Any]) -> tuple[int, int, int]:
+    """Parse the CLIENT HELLO message
+
+    Note: client with no previous state will have last_segment = 0, last_revision = 0
+    Since the document didn't specify what the history_seconds should be,
+    we specify the client to send "history_seconds": 60 
+    """
+
     last_segment = hello.get("last_segment")
     last_revision = hello.get("last_revision")
     history_seconds = hello.get("history_seconds")
@@ -171,17 +178,22 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
 
 
 async def handler(ws) -> None:
+    """Websocket handler function
+
+    Each client/caption_source connection will invoke this function with a new websocket (ws).
+    """
+
     try:
-        raw = await asyncio.wait_for(ws.recv(), timeout=5)
+        raw = await asyncio.wait_for(ws.recv(), timeout=5) # receive initial CLIENT HELLO message (timeout 5 seconds)
         hello = json.loads(raw)
     except (asyncio.TimeoutError, json.JSONDecodeError):
         await ws.close(code=1008, reason="Expected a valid hello message")
         return
 
     msg_type = hello.get("type")
-    if msg_type == "SOURCE_HELLO":
+    if msg_type == "SOURCE_HELLO": # caption source
         await handle_source(ws, hello)
-    elif msg_type == "CLIENT_HELLO":
+    elif msg_type == "CLIENT_HELLO": # client initiate connection
         await handle_client(ws, hello)
     else:
         await ws.close(code=1008, reason="Expected SOURCE_HELLO or CLIENT_HELLO")
@@ -197,7 +209,7 @@ async def main_async(port: int) -> None:
         ping_timeout=20,
     ):
         print(f"LiveRecall baseline listening on ws://0.0.0.0:{port}", flush=True)
-        await asyncio.Future()
+        await asyncio.Future() # run forever
 
 
 def main() -> None:

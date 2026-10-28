@@ -17,6 +17,7 @@ class FinalHistory:
         self.latest_segment_id = 0
 
     def add(self, caption:CaptionSegment) -> None:
+        # cant add segment that are older than the latest segment into the history
         if caption.segment_id <= self.latest_segment_id:
             return
 
@@ -44,6 +45,12 @@ class FinalHistory:
             self.items.popleft()
 
     def get_recent(self, seconds:float, last_segment:int=0, last_revision:int=0) -> list[dict]:
+        """Get the recent segments based on user client hello input
+        
+        Args:
+            seconds (float): Number of seconds ago where client last connect
+            
+        """
         self.remove_old_entries()
         cutoff = time.time() - seconds
 

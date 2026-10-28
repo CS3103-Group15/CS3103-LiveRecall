@@ -57,6 +57,9 @@ class CaptionState:
         return caption_update
 
     def parse_update(self, message:dict[str, Any]) -> CaptionSegment | None:
+        """
+        
+        """
         if message.get("type") != "CAPTION_UPDATE":
             return None
 
