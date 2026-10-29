@@ -1,5 +1,6 @@
 import math
 from typing import Any
+from server.protocol import CaptionUpdateMessage
 
 class CaptionSegment:
     def __init__(self, session:str, segment:int, revision:int, source_ts:float, final:bool, text:str):
@@ -10,7 +11,7 @@ class CaptionSegment:
         self.final = final
         self.text = text
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> CaptionUpdateMessage:
         return {
             "type": "CAPTION_UPDATE",
             "session": self.session,
@@ -22,6 +23,11 @@ class CaptionSegment:
         }
 
 class CaptionState:
+    """Latest accepted provisional revision of the currently active segment.
+
+    Cleared when the segment is finalized. The caller is responsible for
+    storing accepted final updates in FinalHistory.
+    """
     def __init__(self, session:str):
         self.session = session
         self.active: dict[int, CaptionSegment] = {} # Latest provisional caption for each active segment
@@ -36,6 +42,7 @@ class CaptionState:
             self.rejected_count += 1
             return None
 
+        # Reject if the update caption is "before" the most recent finalized segment
         if caption_update.segment_id <= self.highest_finalized_segment:
             self.rejected_count += 1
             return None
@@ -57,9 +64,6 @@ class CaptionState:
         return caption_update
 
     def parse_update(self, message:dict[str, Any]) -> CaptionSegment | None:
-        """
-        
-        """
         if message.get("type") != "CAPTION_UPDATE":
             return None
 
