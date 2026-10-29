@@ -26,13 +26,11 @@ async def handle_source(
             message_type = message.get("type")
             if message_type == "CAPTION_UPDATE":
                 await process_update(message)
-                
+
             elif message_type == "SOURCE_DONE":
                 # Test-control message. The specification does not require it
                 # to be forwarded to clients.
-                print("source finished: ",
-                      f"accepted={CAPTION_STATE.accepted_count}",
-                      f"rejected={CAPTION_STATE.rejected_count}",
+                print("---------------------- Source finished ----------------------",
                       flush=True)
             else:
                 # Forward compatibility: ignore fields/messages this baseline

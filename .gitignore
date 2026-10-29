@@ -28,3 +28,5 @@ Thumbs.db
 # Local temporary files
 *.swp
 *~
+
+results/stage5/command.sh
