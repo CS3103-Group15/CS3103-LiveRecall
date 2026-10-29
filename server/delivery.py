@@ -6,7 +6,7 @@ import json
 import time
 
 from server.history import FinalHistory
-from server.state import CaptionUpdate
+from server.state import CaptionSegment
 
 
 class ClientDelivery:
@@ -67,7 +67,7 @@ class ClientDelivery:
         before = len(self.pending)
         for entry in self.pending:
             segment = entry[0]
-            if segment > self.history.latest_segment:
+            if segment > self.history.latest_segment_id:
                 # Accepted source revisions arrive in increasing order.
                 latest[segment] = entry
         self.pending = deque(latest.values())
@@ -98,7 +98,7 @@ class ClientDelivery:
                 self.congested = False
                 self.recovery_count += 1
 
-    def offer(self, caption: CaptionUpdate, raw: str):
+    def offer(self, caption: CaptionSegment, raw: str):
         """Never await a socket or queue space in the source handler."""
         if self.stopped or self.failure:
             return
@@ -115,7 +115,7 @@ class ClientDelivery:
                 self.compact()
                 # The supplied source has one active segment, so replacement
                 # makes room before appending even when the queue is full.
-                retained = deque(e for e in self.pending if e[0] != caption.segment)
+                retained = deque(e for e in self.pending if e[0] != caption.segment_id)
                 self.coalesced_count += len(self.pending) - len(retained)
                 self.pending = retained
                 self.pending_bytes = sum(e[2] for e in retained)
@@ -123,7 +123,7 @@ class ClientDelivery:
                     self.pending_bytes + size > self.max_pending_bytes):
                 self.failure = "Latest provisional exceeds client queue capacity"
             else:
-                self.pending.append((caption.segment, raw, size, now))
+                self.pending.append((caption.segment_id, raw, size, now))
                 self.pending_bytes += size
         elif self.congested:
             # Final is already stored; its queued provisionals are obsolete.
@@ -154,7 +154,7 @@ class ClientDelivery:
                 # Preserve source order: same-segment provisionals before its
                 # final; never send a later segment ahead of an earlier final.
                 if self.pending and (final is None or
-                        self.pending[0][0] <= final.caption.segment):
+                        self.pending[0][0] <= final.caption.segment_id):
                     _, raw, size, _ = self.pending.popleft()
                     self.pending_bytes -= size
                     await self.send(raw)

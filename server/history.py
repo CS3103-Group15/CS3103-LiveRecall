@@ -2,10 +2,10 @@ from collections import deque
 import time
 import json
 
-from server.state import CaptionUpdate
+from server.state import CaptionSegment
 
 class FinalEntry:
-    def __init__(self, caption:CaptionUpdate, stored_at:float, sequence:int):
+    def __init__(self, caption:CaptionSegment, stored_at:float, sequence:int):
         self.sequence = sequence
         self.raw = json.dumps(caption.to_dict())
         self.size = len(self.raw.encode("utf-8"))
@@ -18,14 +18,14 @@ class FinalHistory:
         self.max_items = max_items
 
         self.items:deque[FinalEntry] = deque()
-        self.latest_segment = 0
+        self.latest_segment_id = 0
         self.next_sequence = 0
         self.by_sequence: dict[int, FinalEntry] = {}
         self.max_bytes = max_bytes
         self.total_bytes = 0
 
-    def add(self, caption:CaptionUpdate) -> None:
-        if caption.segment <= self.latest_segment:
+    def add(self, caption:CaptionSegment) -> None:
+        if caption.segment_id <= self.latest_segment_id:
             return
 
         now = time.monotonic()
@@ -42,7 +42,7 @@ class FinalHistory:
         self.by_sequence[entry.sequence] = entry
         self.total_bytes += entry.size
         self.next_sequence += 1
-        self.latest_segment = caption.segment
+        self.latest_segment_id = caption.segment_id
 
     def remove_old_entries(self, now:float|None=None) -> None:
         if now is None:
@@ -67,7 +67,7 @@ class FinalHistory:
             if caption.source_ts < cutoff:
                 continue
 
-            if (caption.segment < last_segment or (caption.segment == last_segment and caption.revision <= last_revision)):
+            if (caption.segment_id < last_segment or (caption.segment_id == last_segment and caption.revision <= last_revision)):
                 continue
 
             result.append(caption.to_dict())

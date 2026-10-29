@@ -5,11 +5,11 @@ import unittest
 
 from server.delivery import ClientDelivery
 from server.history import FinalHistory
-from server.state import CaptionState, CaptionUpdate
+from server.state import CaptionState, CaptionSegment
 
 
 def caption(segment, revision=1, final=False):
-    return CaptionUpdate('L1', segment, revision, time.time(), final, 'example')
+    return CaptionSegment('L1', segment, revision, time.time(), final, 'example')
 
 
 class Socket:

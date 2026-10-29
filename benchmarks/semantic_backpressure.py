@@ -14,7 +14,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server.delivery import ClientDelivery
 from server.history import FinalHistory
-from server.state import CaptionUpdate
+from server.state import CaptionSegment
 
 
 class RateLimitedSocket:
@@ -40,7 +40,7 @@ async def one_run(enabled):
     try:
         for segment in range(1, 41):
             for revision in range(1, 4):
-                c = CaptionUpdate('L1', segment, revision, time.time(), revision == 3,
+                c = CaptionSegment('L1', segment, revision, time.time(), revision == 3,
                                   'Caption text ' * 30)
                 if c.final:
                     history.add(c)
