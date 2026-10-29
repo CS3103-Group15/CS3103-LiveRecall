@@ -84,7 +84,7 @@ class LiveRecallApplication:
         # register client into delivery hub for live updates :)
         self.delivery_hub.register_client(client)
 
-    async def detact_client(self, client: ClientSession):
+    async def detach_client(self, client: ClientSession):
         """Remove client from delivery hub and close client session
         
         Will invoke client.close() here

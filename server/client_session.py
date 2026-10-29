@@ -209,7 +209,7 @@ async def handle_client(
 
     finally: # close the connection
         if registered:
-            await application.detact_client(client)
+            await application.detach_client(client)
         else:
             await client.close()
 
