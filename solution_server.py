@@ -2,8 +2,8 @@
 """LiveRecall server with revision validation, recovery and isolated delivery.
 
 Run: python solution_server.py --port 8765
-Stage 5 bounds each client's provisional queue and reads finals from shared
-history. Semantic coalescing and overload recovery tuning remain stage 6.
+Per-client senders preserve normal revisions, coalesce obsolete provisional
+updates under congestion and deliver ordered finals from bounded shared history.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from server.state import CaptionState
 CLIENTS: set[ClientDelivery] = set()
 CAPTION_STATE = CaptionState(session="L1")
 FINAL_HISTORY = FinalHistory()
+BACKPRESSURE_ENABLED = True
 
 
 def publish(caption) -> None:
@@ -107,7 +108,8 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
         last_segment=last_segment,
         last_revision=last_revision,
     )
-    delivery = ClientDelivery(ws, FINAL_HISTORY, history_items)
+    delivery = ClientDelivery(ws, FINAL_HISTORY, history_items,
+                              semantic_backpressure=BACKPRESSURE_ENABLED)
     CLIENTS.add(delivery)
     delivery.start()
     print(f"client connected: id={client_id}; recovered={len(history_items)}; "
@@ -118,7 +120,11 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
     finally:
         CLIENTS.discard(delivery)
         await delivery.close()
-        print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}", flush=True)
+        print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}; "
+              f"congestion_entries={delivery.congestion_count}; "
+              f"recoveries={delivery.recovery_count}; "
+              f"coalesced={delivery.coalesced_count}; "
+              f"failure={delivery.failure}", flush=True)
 
 
 async def handler(ws) -> None:
@@ -138,7 +144,9 @@ async def handler(ws) -> None:
         await ws.close(code=1008, reason="Expected SOURCE_HELLO or CLIENT_HELLO")
 
 
-async def main_async(port: int) -> None:
+async def main_async(port: int, backpressure: bool = True) -> None:
+    global BACKPRESSURE_ENABLED
+    BACKPRESSURE_ENABLED = backpressure
     async with websockets.serve(
         handler,
         "0.0.0.0",
@@ -156,10 +164,12 @@ async def main_async(port: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--disable-backpressure", action="store_true",
+                        help="Stage 5 delivery policy for before/after experiments")
     args = parser.parse_args()
     
     try:
-        asyncio.run(main_async(args.port))
+        asyncio.run(main_async(args.port, not args.disable_backpressure))
     except KeyboardInterrupt:
         pass
 

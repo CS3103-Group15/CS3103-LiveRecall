@@ -1,0 +1,24 @@
+{
+  "workload": "40 segments x 3 revisions, held then byte-paced socket",
+  "scope": "controlled local policy microbenchmark",
+  "results": [
+    {
+      "policy": "stage5",
+      "final_completeness_pct": 100,
+      "live_messages": 120,
+      "transmitted_bytes": 62748,
+      "queued_provisionals_at_release": 80,
+      "coalesced_provisionals": 0,
+      "catch_up_ms": 335.226
+    },
+    {
+      "policy": "stage6",
+      "final_completeness_pct": 100,
+      "live_messages": 40,
+      "transmitted_bytes": 20914,
+      "queued_provisionals_at_release": 0,
+      "coalesced_provisionals": 80,
+      "catch_up_ms": 112.587
+    }
+  ]
+}

@@ -82,7 +82,8 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_queue_overflow_is_bounded_and_closes(self):
         ws = Socket(True)
-        d = ClientDelivery(ws, FinalHistory(), [], max_pending=2)
+        d = ClientDelivery(ws, FinalHistory(), [], max_pending=2,
+                           semantic_backpressure=False)
         d.start()
         for rev in range(1, 10):
             c = caption(1, rev)
