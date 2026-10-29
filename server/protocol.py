@@ -12,3 +12,5 @@ class CaptionUpdateMessage(TypedDict):
 class HistoryMessage(TypedDict):
     type: Literal["HISTORY"]
     items: list[CaptionUpdateMessage]
+
+OutgoingMessage = CaptionUpdateMessage | HistoryMessage

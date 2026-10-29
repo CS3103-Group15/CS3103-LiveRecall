@@ -11,7 +11,7 @@ ProcessUpdate = Callable[
 async def handle_source(
     websocket: Any, 
     hello: dict[str, Any], 
-    process_update: ProcessUpdate
+    process_update: ProcessUpdate # callback to application.process_source_update
 ) -> None:
     session = hello.get("session")
     print(f"source connected: session={session}", flush=True)

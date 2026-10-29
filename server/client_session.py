@@ -4,12 +4,12 @@ from typing import Any, TYPE_CHECKING
 
 import websockets
 
-from server.protocol import CaptionUpdateMessage, HistoryMessage
+from server.protocol import OutgoingMessage
+from server.config import CLIENT_QUEUE_MAXSIZE
+from server.semantic_queue import AddResult, SemanticQueue
 
 if TYPE_CHECKING:
     from server.application import LiveRecallApplication
-
-OutgoingMessage = CaptionUpdateMessage | HistoryMessage
 
 class ClientSession:
 
@@ -17,13 +17,11 @@ class ClientSession:
         self, 
         client_id: int,
         websocket: Any,
-        queue_max_size: int = 128
+        queue_max_size: int = CLIENT_QUEUE_MAXSIZE
     ):
         self.client_id = client_id
         self.websocket = websocket
-        self.outgoing_queue: asyncio.Queue[OutgoingMessage] = ( # each client session has its own queue
-            asyncio.Queue(maxsize=queue_max_size)
-        )
+        self.outgoing_queue = SemanticQueue(max_size=queue_max_size)
 
         self.sender_task: asyncio.Task[None] | None = None
         self._is_closed = False
@@ -32,16 +30,12 @@ class ClientSession:
     def is_closed(self):
         return self._is_closed
 
-    def enqueue(self, message: OutgoingMessage) -> bool:
-        """Attempt to enqueue a messsage without waiting
-        
-        Return false if the queue is full or session is closed"""
-
+    def enqueue(self, message: OutgoingMessage) -> AddResult:
         if self.is_closed:
-            return False
+            return AddResult.CLOSED
 
         try:
-            self.outgoing_queue.put_nowait(message) # insert the message into queue without waiting
+            self.outgoing_queue.add_message(message) # insert the message into queue without waiting
         except asyncio.QueueFull: # queue is full, return False
             return False
 
@@ -59,14 +53,10 @@ class ClientSession:
 
         try:
             while True:
-                message = await self.outgoing_queue.get()
+                message = await self.outgoing_queue.get_message()
 
-                try:
-                    encoded_msg = json.dumps(message)
-                    await self.websocket.send(encoded_msg)
-
-                finally:
-                    self.outgoing_queue.task_done() # tells the queue that the fetch message has been processed
+                encoded_msg = json.dumps(message)
+                await self.websocket.send(encoded_msg)
 
         except websockets.ConnectionClosed:
             # client connection is closed, cleanup is handled by run()
@@ -82,7 +72,7 @@ class ClientSession:
         if self.is_closed:
             return
 
-        self.sender_task = asyncio.create_task( # a task that keeps looping and sending message to client
+        self.sender_task = asyncio.create_task( # a asyncio Task that keeps looping and sending message to client
             self.sender_loop(),
             name=f"client-{self.client_id}-sender-task" # easier for debugging :)
         )
@@ -128,7 +118,11 @@ class ClientSession:
 
             await self.websocket.close()
 
-    async def close(self):
+
+
+
+
+    async def close(self, reason: str = "Client session closed"):
         """Close client session without doing application unregistering in delivery hub"""
 
         # make sure websocket is close only once
@@ -136,7 +130,7 @@ class ClientSession:
             return
         self._is_closed = True
 
-        await self.websocket.close(code=1013, reason="Client session closed")
+        await self.websocket.close(code=1013, reason=reason)
 
 
 
