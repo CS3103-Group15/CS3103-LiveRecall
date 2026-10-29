@@ -1,12 +1,13 @@
 from collections import deque
 import time
 
-from server.state import CaptionSegment
+from server.state import CaptionSegment, CaptionUpdateMessage
+from server.protocol import HistoryMessage
 
 class FinalEntry:
     def __init__(self, caption:CaptionSegment, stored_at:float):
-        self.caption = caption
-        self.stored_at = stored_at
+        self.caption: CaptionSegment = caption
+        self.stored_at: float = stored_at
 
 class FinalHistory:
     def __init__(self, retention_seconds:float=70, max_items:float=20000):
@@ -17,6 +18,9 @@ class FinalHistory:
         self.latest_segment_id = 0
 
     def add(self, caption:CaptionSegment) -> None:
+        """Add new finalized segment into history list and discard old entries"""
+
+        # cant add segment that are older than the latest segment into the history
         if caption.segment_id <= self.latest_segment_id:
             return
 
@@ -43,7 +47,14 @@ class FinalHistory:
         while self.items and self.items[0].stored_at < cutoff:
             self.items.popleft()
 
-    def get_recent(self, seconds:float, last_segment:int=0, last_revision:int=0) -> list[dict]:
+    def get_recent(self, seconds:float, last_segment:int=0, last_revision:int=0) -> list[CaptionUpdateMessage]:
+        """Get the recent segments based on user client hello input
+        
+        Args:
+            seconds (float): Number of seconds ago where client last connect
+            last_segment (float): Last segment on client's side
+            last_revision (int): Last revision on client's side
+        """
         self.remove_old_entries()
         cutoff = time.time() - seconds
 
@@ -55,12 +66,20 @@ class FinalHistory:
             if caption.source_ts < cutoff:
                 continue
 
+            # only send segment that client already have
+            # only resend same segment if the client's revision is older
             if (caption.segment_id < last_segment or (caption.segment_id == last_segment and caption.revision <= last_revision)):
                 continue
 
             result.append(caption.to_dict())
 
         return result
+
+    def get_history_message_format(self, history_items: list[CaptionUpdateMessage]) -> HistoryMessage:
+        return {
+            "type": "HISTORY",
+            "items": history_items
+        }
 
     def __len__(self) -> int:
         self.remove_old_entries()
