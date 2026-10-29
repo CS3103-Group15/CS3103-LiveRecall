@@ -3,6 +3,7 @@ import time
 import json
 
 from server.state import CaptionSegment
+from server.protocol import CaptionUpdateMessage, HistoryMessage
 
 class FinalEntry:
     def __init__(self, caption:CaptionSegment, stored_at:float, sequence:int):
@@ -55,7 +56,7 @@ class FinalHistory:
             self.by_sequence.pop(entry.sequence)
             self.total_bytes -= entry.size
 
-    def get_recent(self, seconds:float, last_segment:int=0, last_revision:int=0) -> list[dict]:
+    def get_recent(self, seconds:float, last_segment:int=0, last_revision:int=0) -> list[CaptionUpdateMessage]:
         self.remove_old_entries()
         cutoff = time.time() - seconds
 
@@ -84,3 +85,7 @@ class FinalHistory:
         if sequence < self.next_sequence and sequence not in self.by_sequence:
             raise LookupError("Client fell behind retained final history")
         return self.by_sequence.get(sequence)
+
+    @staticmethod
+    def get_history_message_format(history_items: list[CaptionUpdateMessage]) -> HistoryMessage:
+        return {"type": "HISTORY", "items": history_items}

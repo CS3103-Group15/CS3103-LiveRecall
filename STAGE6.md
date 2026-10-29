@@ -92,3 +92,11 @@ limitations in the team's final AI_USAGE.md and contribution statement; existing
 team declarations were not replaced. One rejected shortcut was always discarding
 provisionals: it would break normal update coverage. Discarding only after a real
 congestion signal preserves the normal revision stream.
+
+## Team module naming
+
+The sender and congestion policy now live in server/client_session.py as
+ClientSession. Its outgoing_queue contains pending provisionals; completed captions
+remain in shared FinalHistory. DeliveryHub publishes to sessions, and
+LiveRecallApplication owns shared state and history/live registration transactions.
+The CLI, wire protocol, limits and policy are unchanged by this reorganisation.

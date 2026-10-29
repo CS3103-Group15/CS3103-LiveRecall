@@ -12,7 +12,7 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from server.delivery import ClientDelivery
+from server.client_session import ClientSession
 from server.history import FinalHistory
 from server.state import CaptionSegment
 
@@ -35,7 +35,7 @@ class RateLimitedSocket:
 
 async def one_run(enabled):
     history, ws = FinalHistory(), RateLimitedSocket()
-    delivery = ClientDelivery(ws, history, [], semantic_backpressure=enabled)
+    delivery = ClientSession(ws, history, [], semantic_backpressure=enabled)
     delivery.start()
     try:
         for segment in range(1, 41):
@@ -44,8 +44,8 @@ async def one_run(enabled):
                                   'Caption text ' * 30)
                 if c.final:
                     history.add(c)
-                delivery.offer(c, json.dumps(c.to_dict()))
-        queued_at_release = len(delivery.pending)
+                delivery.enqueue(c.to_dict(), json.dumps(c.to_dict()))
+        queued_at_release = len(delivery.outgoing_queue)
         started = time.monotonic()
         ws.gate.set()
         async with asyncio.timeout(10):

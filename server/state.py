@@ -1,5 +1,6 @@
 import math
 from typing import Any, Callable
+from server.protocol import CaptionUpdateMessage
 
 class CaptionSegment:
     def __init__(self, session:str, segment:int, revision:int, source_ts:float, final:bool, text:str):
@@ -10,7 +11,7 @@ class CaptionSegment:
         self.final = final
         self.text = text
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> CaptionUpdateMessage:
         return {
             "type": "CAPTION_UPDATE",
             "session": self.session,

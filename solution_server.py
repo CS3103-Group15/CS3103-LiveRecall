@@ -1,164 +1,9 @@
 #!/usr/bin/env python3
-"""LiveRecall server with revision validation, recovery and isolated delivery.
-
-Run: python solution_server.py --port 8765
-Per-client senders preserve normal revisions, coalesce obsolete provisional
-updates under congestion and deliver ordered finals from bounded shared history.
-"""
-
-from __future__ import annotations
-
+"""Required LiveRecall command-line entry point."""
 import argparse
 import asyncio
-import json
-from typing import Any
 
-import websockets
-
-from server.delivery import ClientDelivery
-from server.history import FinalHistory
-from server.state import CaptionState
-
-CLIENTS: set[ClientDelivery] = set()
-CAPTION_STATE = CaptionState(session="L1")
-FINAL_HISTORY = FinalHistory()
-BACKPRESSURE_ENABLED = True
-
-
-def publish(caption) -> None:
-    raw = json.dumps(caption.to_dict())
-    for client in tuple(CLIENTS):
-        client.offer(caption, raw)
-
-
-async def handle_source(ws, hello: dict[str, Any]) -> None:
-    session = hello.get("session")
-    print(f"source connected: session={session}", flush=True)
-
-    try:
-        async for raw in ws:
-            try:
-                msg = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
-
-            msg_type = msg.get("type")
-            if msg_type == "CAPTION_UPDATE":
-                try:
-                    accepted = CAPTION_STATE.accept_update(msg, FINAL_HISTORY.add)
-                except OverflowError:
-                    # Do not commit a final that cannot be retained.
-                    await ws.close(code=1013, reason="Final history capacity exhausted")
-                    return
-
-                if accepted is None:
-                    continue
-
-                publish(accepted)
-                # Explicit fairness even when buffered source reads don't yield.
-                await asyncio.sleep(0)
-            elif msg_type == "SOURCE_DONE":
-                # Test-control message. The specification does not require it
-                # to be forwarded to clients.
-                print("source finished: ",
-                      f"accepted={CAPTION_STATE.accepted_count}",
-                      f"rejected={CAPTION_STATE.rejected_count}",
-                      flush=True)
-            else:
-                # Forward compatibility: ignore fields/messages this baseline
-                # doesn't understand rather than crashing.
-                continue
-    finally:
-        print("source disconnected", flush=True)
-
-
-def parse_client_resume(hello:dict[str, Any]) -> tuple[int, int, int]:
-    last_segment = hello.get("last_segment")
-    last_revision = hello.get("last_revision")
-    history_seconds = hello.get("history_seconds")
-
-    if type(last_segment) is not int or last_segment < 0:
-        last_segment = 0
-
-    if type(last_revision) is not int or last_revision < 0:
-        last_revision = 0
-
-    if type(history_seconds) is not int or history_seconds < 0:
-        history_seconds = 30
-
-    if history_seconds > 60:
-        history_seconds = 60
-
-    return last_segment, last_revision, history_seconds
-
-
-async def handle_client(ws, hello: dict[str, Any]) -> None:
-    client_id = hello.get("client_id")
-
-    if hello.get("session") != "L1":
-        await ws.close(code=1008, reason="Invalid session")
-        return
-
-    last_segment, last_revision, history_seconds = parse_client_resume(hello)
-
-    # Snapshot, cursor capture and registration contain no await, so source
-    # processing cannot interleave and create a history/live gap.
-    history_items = FINAL_HISTORY.get_recent(
-        seconds=history_seconds,
-        last_segment=last_segment,
-        last_revision=last_revision,
-    )
-    delivery = ClientDelivery(ws, FINAL_HISTORY, history_items,
-                              semantic_backpressure=BACKPRESSURE_ENABLED)
-    CLIENTS.add(delivery)
-    delivery.start()
-    print(f"client connected: id={client_id}; recovered={len(history_items)}; "
-          f"clients={len(CLIENTS)}", flush=True)
-    try:
-        async for _ in ws:
-            pass
-    finally:
-        CLIENTS.discard(delivery)
-        await delivery.close()
-        print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}; "
-              f"congestion_entries={delivery.congestion_count}; "
-              f"recoveries={delivery.recovery_count}; "
-              f"coalesced={delivery.coalesced_count}; "
-              f"failure={delivery.failure}", flush=True)
-
-
-async def handler(ws) -> None:
-    try:
-        raw = await asyncio.wait_for(ws.recv(), timeout=5)
-        hello = json.loads(raw)
-    except (asyncio.TimeoutError, json.JSONDecodeError):
-        await ws.close(code=1008, reason="Expected a valid hello message")
-        return
-
-    msg_type = hello.get("type")
-    if msg_type == "SOURCE_HELLO":
-        await handle_source(ws, hello)
-    elif msg_type == "CLIENT_HELLO":
-        await handle_client(ws, hello)
-    else:
-        await ws.close(code=1008, reason="Expected SOURCE_HELLO or CLIENT_HELLO")
-
-
-async def main_async(port: int, backpressure: bool = True) -> None:
-    global BACKPRESSURE_ENABLED
-    BACKPRESSURE_ENABLED = backpressure
-    async with websockets.serve(
-        handler,
-        "0.0.0.0",
-        port,
-        max_size=2**20,
-        ping_interval=20,
-        ping_timeout=20,
-        close_timeout=2,
-        write_limit=32768,
-    ):
-        print(f"LiveRecall listening on ws://0.0.0.0:{port}", flush=True)
-        await asyncio.Future()
+from server.application import run_server
 
 
 def main() -> None:
@@ -167,9 +12,8 @@ def main() -> None:
     parser.add_argument("--disable-backpressure", action="store_true",
                         help="Stage 5 delivery policy for before/after experiments")
     args = parser.parse_args()
-    
     try:
-        asyncio.run(main_async(args.port, not args.disable_backpressure))
+        asyncio.run(run_server(args.port, not args.disable_backpressure))
     except KeyboardInterrupt:
         pass
 

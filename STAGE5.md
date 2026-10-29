@@ -1,6 +1,6 @@
 # Stage 5 client delivery
 
-Each connection owns a ClientDelivery sender task. The source validates updates,
+Each connection owns a ClientSession sender task. The source validates updates,
 stores finals and offers work without awaiting client sends. The source yields
 between updates so sender tasks can run even during a buffered source burst.
 
@@ -60,3 +60,12 @@ three-run Ubuntu experiments or proof of sustained memory usage under stress.
 Record this AI-assisted implementation and the reviewed overload limitations in the
 final AI_USAGE.md and contribution statement. Existing team declarations have not
 been replaced.
+
+## Module organisation
+
+The current refactor follows the team module layout: application.py coordinates
+shared state, delivery_hub.py publishes work, client_session.py owns each sender,
+source_session.py handles source input and protocol.py defines message shapes.
+The original delivery.py has moved to client_session.py. Outgoing provisional work
+is named outgoing_queue; finals still use shared-history bookmarks. ClientSession
+uses a deque so the congestion scheduler can replace obsolete pending revisions.

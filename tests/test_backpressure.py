@@ -3,7 +3,7 @@ import json
 import time
 import unittest
 
-from server.delivery import ClientDelivery
+from server.client_session import ClientSession
 from server.history import FinalHistory
 from test_delivery import Socket, caption, settle
 
@@ -11,24 +11,24 @@ from test_delivery import Socket, caption, settle
 def offer(delivery, history, update):
     if update.final:
         history.add(update)
-    delivery.offer(update, json.dumps(update.to_dict()))
+    delivery.enqueue(update.to_dict(), json.dumps(update.to_dict()))
 
 
 class BackpressureTests(unittest.IsolatedAsyncioTestCase):
     async def test_overload_keeps_all_finals_and_latest_active(self):
         h, ws = FinalHistory(), Socket(True)
-        d = ClientDelivery(ws, h, [], high_pending=4)
+        d = ClientSession(ws, h, [], high_pending=4)
         d.start()
         try:
             for seg in range(1, 21):
                 for rev in range(1, 4):
                     offer(d, h, caption(seg, rev, rev == 3))
-                self.assertLessEqual(len(d.pending), 1 if d.congested else d.high_pending)
-                self.assertEqual(d.pending_bytes, sum(e[2] for e in d.pending))
+                self.assertLessEqual(len(d.outgoing_queue), 1 if d.congested else d.high_pending)
+                self.assertEqual(d.outgoing_bytes, sum(e[2] for e in d.outgoing_queue))
             for rev in range(1, 10):
                 offer(d, h, caption(21, rev))
-            self.assertEqual(len(d.pending), 1)
-            self.assertEqual(json.loads(d.pending[0][1])['revision'], 9)
+            self.assertEqual(len(d.outgoing_queue), 1)
+            self.assertEqual(json.loads(d.outgoing_queue[0][1])['revision'], 9)
             self.assertIsNone(d.failure)
             ws.gate.set()
             await settle(lambda: len(ws.messages) == 22)
@@ -42,7 +42,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_disabled_policy_preserves_backlog_for_comparison(self):
         h, ws = FinalHistory(), Socket(True)
-        d = ClientDelivery(ws, h, [], semantic_backpressure=False)
+        d = ClientSession(ws, h, [], semantic_backpressure=False)
         d.start()
         try:
             for seg in range(1, 9):
@@ -57,7 +57,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_normal_stream_preserves_every_revision(self):
         h, ws = FinalHistory(), Socket()
-        d = ClientDelivery(ws, h, [])
+        d = ClientSession(ws, h, [])
         d.start()
         try:
             await settle(lambda: len(ws.messages) == 1)
@@ -75,7 +75,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_recovery_returns_to_full_revision_delivery(self):
         h, ws = FinalHistory(), Socket(True)
-        d = ClientDelivery(ws, h, [], high_pending=3, recovery_seconds=0.02)
+        d = ClientSession(ws, h, [], high_pending=3, recovery_seconds=0.02)
         d.start()
         try:
             for rev in range(1, 7):
@@ -103,7 +103,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
                     await self.gate.wait()
                 self.messages.append(msg)
         h, ws = FinalHistory(), GatedSocket(True)
-        d = ClientDelivery(ws, h, [], high_pending=2)
+        d = ClientSession(ws, h, [], high_pending=2)
         d.start()
         try:
             await settle(lambda: len(ws.messages) == 1)
@@ -125,21 +125,21 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
         h = FinalHistory()
         sample = caption(1)
         size = len(json.dumps(sample.to_dict()).encode())
-        d = ClientDelivery(Socket(), h, [], max_pending_bytes=size * 2 + 20,
+        d = ClientSession(Socket(), h, [], max_pending_bytes=size * 2 + 20,
                            high_bytes=size * 2, high_pending=100)
         for rev in range(1, 100):
             offer(d, h, caption(1, rev))
-            self.assertLessEqual(d.pending_bytes, d.max_pending_bytes)
+            self.assertLessEqual(d.outgoing_bytes, d.max_pending_bytes)
         self.assertIsNone(d.failure)
-        self.assertEqual(len(d.pending), 1)
-        self.assertEqual(json.loads(d.pending[0][1])['revision'], 99)
+        self.assertEqual(len(d.outgoing_queue), 1)
+        self.assertEqual(json.loads(d.outgoing_queue[0][1])['revision'], 99)
 
     async def test_age_transport_and_slow_send_trigger_congestion(self):
         h = FinalHistory()
-        d = ClientDelivery(Socket(), h, [])
+        d = ClientSession(Socket(), h, [])
         offer(d, h, caption(1))
-        seg, raw, size, _ = d.pending[0]
-        d.pending[0] = (seg, raw, size, time.monotonic() - 1)
+        seg, raw, size, _ = d.outgoing_queue[0]
+        d.outgoing_queue[0] = (seg, raw, size, time.monotonic() - 1)
         d.update_pressure(time.monotonic())
         self.assertTrue(d.congested)
 
@@ -148,7 +148,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
                 return 65536
         ws = Socket()
         ws.transport = Transport()
-        d = ClientDelivery(ws, h, [])
+        d = ClientSession(ws, h, [])
         d.update_pressure(time.monotonic())
         self.assertTrue(d.congested)
 
@@ -156,12 +156,12 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
             async def send(self, raw):
                 await asyncio.sleep(0.01)
                 await super().send(raw)
-        d = ClientDelivery(SlowSocket(), h, [], slow_send_seconds=0.001)
+        d = ClientSession(SlowSocket(), h, [], slow_send_seconds=0.001)
         await d.send('{}')
         self.assertTrue(d.congested)
 
     async def test_quiet_interval_prevents_immediate_mode_flapping(self):
-        d = ClientDelivery(Socket(), FinalHistory(), [], recovery_seconds=0.5)
+        d = ClientSession(Socket(), FinalHistory(), [], recovery_seconds=0.5)
         now = time.monotonic()
         d.enter_congestion(now)
         d.update_pressure(now + 0.1)
@@ -172,8 +172,8 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
     async def test_slow_client_does_not_change_healthy_client_policy(self):
         h = FinalHistory()
         slow, fast = Socket(True), Socket()
-        a = ClientDelivery(slow, h, [], high_pending=4)
-        b = ClientDelivery(fast, h, [])
+        a = ClientSession(slow, h, [], high_pending=4)
+        b = ClientSession(fast, h, [])
         a.start(); b.start()
         count = 1
         try:
@@ -184,7 +184,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
                     if c.final:
                         h.add(c)
                     raw = json.dumps(c.to_dict())
-                    a.offer(c, raw); b.offer(c, raw)
+                    a.enqueue(c.to_dict(), raw); b.enqueue(c.to_dict(), raw)
                     count += 1
                     await settle(lambda: len(fast.messages) == count)
             self.assertEqual(b.coalesced_count, 0)
