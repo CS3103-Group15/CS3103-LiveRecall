@@ -5,7 +5,7 @@ import websockets
 import json
 
 from server.history import FinalHistory
-from server.state import CaptionState
+from server.state import CaptionSegment, CaptionState
 from server.delivery_hub import ClientSession, DeliveryHub
 from server.source_session import handle_source
 from server.client_session import handle_client
@@ -44,45 +44,63 @@ class LiveRecallApplication:
         else:
             await websocket.close(code=1008, reason="Expected SOURCE_HELLO or CLIENT_HELLO")
 
-    async def process_source_update(self, message: dict[str, Any]) -> None:
-        """Accept, store and publish one source update"""
+    async def process_source_update(self, message: dict[str, Any]) -> CaptionSegment | None:
+        clients_to_close: list[ClientSession] = []
 
         async with self._lock:
-            accepted = self.caption_state.accept_update(message)
+            accepted_segment = self.caption_state.accept_update(message)
 
-            if accepted is None:
+            if accepted_segment is None:
                 return None
 
-            if accepted.final:
-                self.final_history.add(accepted)
+            # Final must enter shared history before clients are notified.
+            if accepted_segment.final:
+                self.final_history.add(accepted_segment)
 
-            self.delivery_hub.publish(accepted.to_dict())
+            clients_to_close = self.delivery_hub.publish(
+                accepted_segment.to_dict()
+            )
+
+        # Disconnect clients where delivery_hub.publish() fails to send them message due to overflow
+        await asyncio.gather(
+            *(
+                client.close(
+                    reason="Unable to maintain bounded delivery state"
+                )
+                for client in clients_to_close
+            ),
+            return_exceptions=True,
+        )
+
+        return accepted_segment
 
     async def attach_client(
         self,
-        client: ClientSession,
+        *,
+        websocket: Any,
+        client_id: int,
         last_segment: int,
         last_revision: int,
         history_seconds: int,
-    ) -> None:
-        """Queue history segments and register a client for live updates"""
-        
-        # get the history segment needed based on client hello value
+    ) -> ClientSession:
         async with self._lock:
+            # get the history segment needed based on client hello value
             history_items = self.final_history.get_recent(
                 seconds=history_seconds,
                 last_segment=last_segment,
                 last_revision=last_revision
             )
 
-            history_message = self.final_history.get_history_message_format(history_items)
+            client = ClientSession(
+                client_id=client_id,
+                websocket=websocket,
+                history=self.final_history,
+                initial_history_items=history_items,
+            )
 
-            # history must be the First queued message !!!
-            if not client.enqueue(history_message):
-                raise RuntimeError("Unable to queue initial client history")
+            self.delivery_hub.register_client(client)
 
-        # register client into delivery hub for live updates :)
-        self.delivery_hub.register_client(client)
+        return client
 
     async def detach_client(self, client: ClientSession):
         """Remove client from delivery hub and close client session

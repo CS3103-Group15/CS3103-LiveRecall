@@ -1,200 +1,237 @@
-import asyncio
+from collections import deque
+from collections.abc import Callable
 from email import message
 from enum import Enum, auto
 
-from server.config import CLIENT_QUEUE_MAXSIZE
-from server.protocol import OutgoingMessage
-from collections import deque
+from server.config import (
+    CLIENT_QUEUE_HIGH_WATERMARK,
+    CLIENT_QUEUE_LOW_WATERMARK,
+    CLIENT_QUEUE_MAXSIZE,
+)
+from server.protocol import CaptionUpdateMessage
+
 
 class AddResult(Enum):
-    """Represents the outcome of adding a message to a SemanticQueue"""
-
-    ENQUEUED = 1 # message added to queue normally
-    COALESCED = 2 # new message added, make room for the new message by removing either removing its own provisional OR by removing 1 oldest provisional segment
-    DROPPED_PROVISIONAL = 3 # new message isn't added as all messages in the queue are Final/HISTORY message
-    OVERFLOW = 4
-    CLOSED = 5
+    ENQUEUED = auto()
+    COALESCED = auto()
+    OVERFLOW = auto()
+    CLOSED = auto()
 
 
 class SemanticQueue:
-    """Bounded queue with overload handling"""
+    """Bounded per-client queue for provisional updates."""
 
-    def __init__(self, max_size: int = CLIENT_QUEUE_MAXSIZE):
-        if max_size <= 0:
-            raise ValueError("max_size must be positive number")
+    def __init__(
+        self,
+        max_size: int = CLIENT_QUEUE_MAXSIZE,
+        high_watermark: int = CLIENT_QUEUE_HIGH_WATERMARK,
+        low_watermark: int = CLIENT_QUEUE_LOW_WATERMARK
+    ) -> None:
+        # if not 0 <= low_watermark < high_watermark <= max_size:
+        #     raise ValueError(
+        #         "Require 0 <= low < high <= max_size"
+        #     )
 
-        self.max_size= max_size
-        self.items: deque[OutgoingMessage] = deque() # use deque instead of [] so that all insert/delete takes O(1)
+        self.max_size = max_size
+        self.high_watermark = high_watermark
+        self.low_watermark = low_watermark
 
-        # wake up signal for reading tasks that are waiting for new message to arrive to the queue
-        # used in get() method as caller will wait if there is no message in the queue
-        # need this to wake the caller up once there is queue is no longer empty
-        self.not_empty_event = asyncio.Event()
+        self.items: deque[CaptionUpdateMessage] = deque()
 
-        # Useful for experiments and debugging
         self.coalesced_count = 0
-        self.dropped_provisional_count = 0
-        self.overflow_count = 0
-
 
     @property
-    def size(self):
+    def size(self) -> int:
         return len(self.items)
 
-    @staticmethod
-    def is_provisional(message: OutgoingMessage):
-        return message.get("type") == "CAPTION_UPDATE" and message.get("final") is False
+    def peek_message(self) -> CaptionUpdateMessage | None:
+        if not self.items:
+            return None
 
-    def _append(self, message: OutgoingMessage) -> None:
-        self.items.append(message)
-        self.not_empty_event.set() # wake up sending Task that is waiting for new item in the queue
+        return self.items[0]
 
+    def pop_message(self) -> CaptionUpdateMessage | None:
+        if not self.items:
+            return None
 
+        message = self.items.popleft()
 
+        # if self.congested and self.size <= self.low_watermark:
+            # self.congested = False
+            # self.recovery_count += 1
 
+        return message
 
-    def add_message(self, new_message: OutgoingMessage):
-        """Add message into the queue without waiting
-        
-        May remove the provisional segments in the queue if
-        the queue if almost full, i.e. client is overloaded
+    def add_normal(self, message: CaptionUpdateMessage) -> AddResult:
+        """Retain every provisional during normal operation."""
 
-        - Normal condition will keep all segments revision
-        - Overload condition will remove some provisional segment 
-          before removing all provisional segment
-        """
+        self.check_is_provisional(message)
 
-        if self.size < self.max_size: # queue not full, add normally
-            self._append(new_message)
-            return AddResult.ENQUEUED
-
-
-        # queue is FULL !!!
-
-        # if queue is full and the message is HISTORY -> overflow
-        if new_message["type"] == "HISTORY":
-            # HISTORY is a recovery message and must not be dropped
-            self.overflow_count += 1
+        if self.size >= self.max_size: # safety net
             return AddResult.OVERFLOW
 
-        # new message is not final segment
-        if new_message["final"] is False:
-            # 1) remove older provisional revision of this segment
-            removed_count = self._remove_matching(
-                lambda msg: (
-                    msg["type"] == "CAPTION_UPDATE" 
-                    and msg["final"] is False
-                    and msg["segment"] == new_message["segment"]
-                )
-            )
-            if removed_count > 0:
-                self._append(new_message)
-                self.coalesced_count += removed_count
-                return AddResult.COALESCED
+        self.items.append(message)
+        return AddResult.ENQUEUED
 
-            # 2) if there is no older revision of this segment, then try to make room by
-            #    removing one Oldest provisional segment --> won't affect user experience that much
-            if self._remove_oldest_provisional_segment():
-                self._append(new_message)
-                self.coalesced_count += 1
-                return AddResult.COALESCED
+    def add_coalesced(self, message: CaptionUpdateMessage, finalized_through_id: int) -> AddResult:
+        """Keep only the newest useful provisional during congestion.
+        
+        Discard provisional segments with ID <= finalized_through_id (the most recent final ID)
+        """
 
-            # 3) Don't have any provisional segment in the queue currently, all are Final segment / HISTORY message.
-            #    Drop the current new_message as it is provisional
-            self.dropped_provisional_count += 1
-            return AddResult.DROPPED_PROVISIONAL
+        self.check_is_provisional(message)
 
+        removed_count = self.remove_finalized_through(finalized_through_id)
 
-        # else: new_message is Final
+        removed_count += self.remove_segment_with_id(message["segment"])
 
-        # Final segment supersedes all queued revision for this segmen
-        removed_count = self._remove_matching(
-            lambda msg: (
-                msg["type"] == "CAPTION_UPDATE" 
-                and msg["final"] is False
-                and msg["segment"] == new_message["segment"]
+        self.items.append(message)
+
+        if removed_count > 0:
+            return AddResult.COALESCED
+
+        return AddResult.ENQUEUED
+
+    def compact(self, finalized_through: int) -> int:
+        """Compact all existing provisionals when congestion begins.
+        
+        Removes provisionals belonging to finalized segments and keeps only
+        the latest queued revision of every unfinished segment.
+        """
+
+        original_size = self.size
+
+        latest_index_by_segment: dict[int, int] = {}
+
+        for index, message in enumerate(self.items):
+            if message["segment"] > finalized_through:
+                latest_index_by_segment[message["segment"]] = index # keep the latest revision of a segment
+
+        self.items = deque(
+            message
+            for index, message in enumerate(self.items)
+            if (
+                message["segment"] > finalized_through
+                and latest_index_by_segment[message["segment"]] == index
             )
         )
 
-        # queue is still full, remove one oldest provisional
-        if self.size >= self.max_size:
-            if self._remove_oldest_provisional_segment():
-                removed_count += 1
-
-        if self.size < self.max_size: # manage to free up at least one space
-            self._append(new_message)
-
-            if removed_count > 0:
-                self.coalesced_count += removed_count
-                return AddResult.COALESCED
-
-            else:
-                return AddResult.ENQUEUED # in rare case where the queue got freed up mid-execution without removing any message
-
-        # Cant remove any provisional message and queue is still full of Final/History messages --> overflow
-        self.overflow_count += 1
-        return AddResult.OVERFLOW
+        removed_count = original_size - self.size
+        self.coalesced_count += removed_count
+        return removed_count
 
 
 
-    async def get_message(self) -> OutgoingMessage:
-        """Retrive and remove rhe next message in the queue
-        
-        Blocks asynchronously if the queue is empty, waiting until a new message is added.
-        Behave like asyncio.Queue().get()
-        """
-        while True:
-            if self.items:
-                return self.items.popleft()
-
-            self.not_empty_event.clear() # set the event flag back to False
-
-            # recheck again after clearing event flag to avoid missed wake up
-            if self.items:
-                continue
-
-            # asyncio Task will be suspended here until not_empty_event.set() is called,
-            # then the while loop will resume
-            await self.not_empty_event.wait()
-
-
-
-
-
-    # ------- helper function :) -----
-    
-    def _remove_matching(self, predicate) -> int:
-        """Remove matching items and return the number of removed items"""
+    def remove_segment_with_id(self, segment_id: int) -> int:
         original_size = self.size
         self.items = deque(
             message
             for message in self.items
-            if not predicate(message)
+            if message["segment"] != segment_id
         )
         removed_count = original_size - self.size
+        self.coalesced_count += removed_count
         return removed_count
 
-
-    def _remove_oldest_provisional_segment(self) -> bool:
-        """Try to remove one single oldest provisional segment
+    def remove_finalized_through(self, segment_id: int) -> int:
+        """Remove provisionals whose final now exists
         
-        Return True if manage to found one and remove it, False otherwise
+        Remove all segments with id up to segment_id
         """
 
-        removed = False
-        retained_items: deque[OutgoingMessage] = deque()
+        original_size = self.size
+        self.items = deque(
+            message
+            for message in self.items
+            if message["segment"] > segment_id # final doesnt exist yet
+        )
+        removed_count = original_size - self.size
+        self.coalesced_count += removed_count
+        return removed_count
+    
 
-        while self.items:
-            msg = self.items.popleft() # pop the oldest segment
-
-            if not removed and self.is_provisional(msg): # found one oldest provisional segment
-                removed = True
-                continue # dont add it to the queue, i.e remove it from the queue
-
-            retained_items.append(msg)
-
-        self.items = retained_items
-        return removed
+    def check_is_provisional(self, message: CaptionUpdateMessage) -> None:
+        if message["final"]:
+            raise ValueError(
+                "Final captions must use shared FinalHistory"
+            )
 
 
-        
+    # def add_message(
+    #     self,
+    #     message: CaptionUpdateMessage,
+    # ) -> AddResult:
+    #     """Add a provisional update without blocking."""
+
+    #     if message["final"]:
+    #         raise ValueError(
+    #             "Final captions must use shared FinalHistory"
+    #         )
+
+    #     if not self.semantic_backpressure:
+    #         if self.size >= self.max_size:
+    #             return AddResult.OVERFLOW
+
+    #         self.items.append(message)
+    #         return AddResult.ENQUEUED
+
+    #     if not self.congested:
+    #         if self.size >= self.max_size:
+    #             self.congested = True
+    #             self.congestion_count += 1
+    #         else:
+    #             self.items.append(message)
+
+    #             if self.size >= self.high_watermark: # if after adding, size > high_watermark -> set congested
+    #                 self.congested = True
+    #                 self.congestion_count += 1
+
+    #             return AddResult.ENQUEUED
+
+    #     # is in congested state: remove obsolete provisional revisions of the same
+    #     # segment before adding the newest revision.
+    #     removed_count = self._remove_matching(
+    #         lambda queued: (
+    #             queued["segment"] == message["segment"]
+    #             and queued["final"] is False
+    #         )
+    #     )
+
+    #     # If a different active segment filled the queue, 
+    #     # remove one oldest provisional update to free up one space
+    #     # without affecting user experience much
+    #     if self.size >= self.max_size:
+    #         if self._remove_oldest():
+    #             removed_count += 1
+
+    #     if self.size >= self.max_size: #safety net only
+    #         return AddResult.OVERFLOW
+
+    #     self.items.append(message)
+
+    #     if removed_count > 0:
+    #         self.coalesced_count += removed_count
+    #         return AddResult.COALESCED
+
+    #     return AddResult.ENQUEUED # in rare case where the queue got freed up mid-execution without removing any message
+
+    # def _remove_matching(
+    #     self,
+    #     predicate: Callable[[CaptionUpdateMessage], bool],
+    # ) -> int:
+    #     original_size = self.size
+
+    #     self.items = deque(
+    #         message
+    #         for message in self.items
+    #         if not predicate(message)
+    #     )
+
+    #     return original_size - self.size
+
+    # def _remove_oldest(self) -> bool:
+    #     if not self.items:
+    #         return False
+
+    #     self.items.popleft()
+    #     return True

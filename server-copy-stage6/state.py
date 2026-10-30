@@ -1,0 +1,106 @@
+import math
+from typing import Any
+from server.protocol import CaptionUpdateMessage
+
+class CaptionSegment:
+    def __init__(self, session:str, segment:int, revision:int, source_ts:float, final:bool, text:str):
+        self.session = session
+        self.segment_id = segment
+        self.revision = revision
+        self.source_ts = source_ts
+        self.final = final
+        self.text = text
+
+    def to_dict(self) -> CaptionUpdateMessage:
+        return {
+            "type": "CAPTION_UPDATE",
+            "session": self.session,
+            "segment": self.segment_id,
+            "revision": self.revision,
+            "source_ts": self.source_ts,
+            "final": self.final,
+            "text": self.text
+        }
+
+class CaptionState:
+    """Latest accepted provisional revision of the currently active segment.
+
+    Cleared when the segment is finalized. The caller is responsible for
+    storing accepted final updates in FinalHistory.
+    """
+    def __init__(self, session:str):
+        self.session = session
+        self.active: dict[int, CaptionSegment] = {} # Latest provisional caption for each active segment
+        self.highest_finalized_segment = 0 # Largest finalized segment ID
+        self.accepted_count = 0
+        self.rejected_count = 0
+
+    def accept_update(self, message:dict[str, Any]) -> CaptionSegment | None:
+        caption_update = self.parse_update(message)
+
+        if caption_update is None:
+            self.rejected_count += 1
+            return None
+
+        # Reject if the update caption is "before" the most recent finalized segment
+        if caption_update.segment_id <= self.highest_finalized_segment:
+            self.rejected_count += 1
+            return None
+
+        previous = self.active.get(caption_update.segment_id)
+
+        if previous is not None:
+            if caption_update.revision <= previous.revision:
+                self.rejected_count += 1
+                return None
+
+        if caption_update.final:
+            self.highest_finalized_segment = caption_update.segment_id
+            self.active.pop(caption_update.segment_id, None)
+        else:
+            self.active[caption_update.segment_id] = caption_update
+
+        self.accepted_count += 1
+        return caption_update
+
+    def parse_update(self, message:dict[str, Any]) -> CaptionSegment | None:
+        if message.get("type") != "CAPTION_UPDATE":
+            return None
+
+        if message.get("session") != self.session:
+            return None
+
+        segment = message.get("segment")
+        revision = message.get("revision")
+        source_ts = message.get("source_ts")
+        final = message.get("final")
+        text = message.get("text")
+
+        if type(segment) is not int or segment <= 0:
+            return None
+
+        if type(revision) is not int or revision <= 0:
+            return None
+
+        if type(final) is not bool:
+            return None
+
+        if not isinstance(text, str):
+            return None
+
+        if (
+            isinstance(source_ts, bool)
+            or not isinstance(source_ts, (int, float))
+            or not math.isfinite(source_ts)
+        ):
+            return None
+
+        return CaptionSegment(
+            session=self.session,
+            segment=segment,
+            revision=revision,
+            source_ts=source_ts,
+            final=final,
+            text=text
+        )
+    
