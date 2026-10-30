@@ -12,6 +12,7 @@ from server.protocol import CaptionUpdateMessage
 
 
 class AddResult(Enum):
+    """Represent the action taken when trying to add a message into SemanticQueue"""
     ENQUEUED = auto()
     COALESCED = auto()
     OVERFLOW = auto()
@@ -55,11 +56,6 @@ class SemanticQueue:
             return None
 
         message = self.items.popleft()
-
-        # if self.congested and self.size <= self.low_watermark:
-            # self.congested = False
-            # self.recovery_count += 1
-
         return message
 
     def add_normal(self, message: CaptionUpdateMessage) -> AddResult:
@@ -76,7 +72,8 @@ class SemanticQueue:
     def add_coalesced(self, message: CaptionUpdateMessage, finalized_through_id: int) -> AddResult:
         """Keep only the newest useful provisional during congestion.
         
-        Discard provisional segments with ID <= finalized_through_id (the most recent final ID)
+        Discard provisional segments with ID <= finalized_through_id (the most recent final ID) and
+        discard provisional segment with same ID as message
         """
 
         self.check_is_provisional(message)

@@ -30,6 +30,11 @@ class DeliveryHub:
         self.client_list.discard(client)
         
     def publish(self, message: CaptionUpdateMessage) -> list[ClientSession]:
+        """Offer each client a new live message, if client can't receive the message, then discard the client.
+
+        Returns: client sessions to be closed
+        """
+
         clients_to_close: list[ClientSession] = []
 
         for client in tuple(self.client_list):

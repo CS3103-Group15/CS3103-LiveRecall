@@ -38,16 +38,23 @@ class LiveRecallApplication:
 
         msg_type = hello.get("type")
         if msg_type == "SOURCE_HELLO": # caption source
-            await handle_source(websocket, hello, self.process_source_update)
+            await handle_source(websocket, hello, self.process_source_update) # pass a callback function :)
         elif msg_type == "CLIENT_HELLO": # client initiate connection
             await handle_client(websocket, hello, self)
         else:
             await websocket.close(code=1008, reason="Expected SOURCE_HELLO or CLIENT_HELLO")
 
     async def process_source_update(self, message: dict[str, Any]) -> CaptionSegment | None:
+        """Parse and create ClientSegment object, update FinalHistory if is final segment,
+        then publish it to all clients
+        
+        Returns the parsed, accepted segment
+        """
+
         clients_to_close: list[ClientSession] = []
 
         async with self._lock:
+            # parse the message and get a CaptionSegment object
             accepted_segment = self.caption_state.accept_update(message)
 
             if accepted_segment is None:
@@ -61,7 +68,7 @@ class LiveRecallApplication:
                 accepted_segment.to_dict()
             )
 
-        # Disconnect clients where delivery_hub.publish() fails to send them message due to overflow
+        # Disconnect clients where delivery_hub.publish() fails to send them message due to overflow / session closed
         await asyncio.gather(
             *(
                 client.close(
@@ -83,6 +90,11 @@ class LiveRecallApplication:
         last_revision: int,
         history_seconds: int,
     ) -> ClientSession:
+        """
+        Create a new ClientSession and insert tthe initial history items and register
+        the client in delivery hub
+        """
+        
         async with self._lock:
             # get the history segment needed based on client hello value
             history_items = self.final_history.get_recent(

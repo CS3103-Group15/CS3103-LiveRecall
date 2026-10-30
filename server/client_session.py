@@ -32,6 +32,7 @@ class ClientSession:
         history: FinalHistory, # same reference FinalHistory object for every client
         initial_history_items: list[CaptionUpdateMessage], # the initial history item from CLIENT HELLO
 
+        # the queue size, watermark and timeout
         queue_max_size: int = CLIENT_QUEUE_MAXSIZE,
         high_watermark: int = CLIENT_QUEUE_HIGH_WATERMARK,
         low_watermark: int = CLIENT_QUEUE_LOW_WATERMARK,
@@ -41,7 +42,8 @@ class ClientSession:
         self.websocket = websocket
         self.history = history
 
-        # initial "HISTORY" message, becomes "None" after it is sent
+        # initial "HISTORY" message.
+        # Becomes None after it is sent
         self.initial_history: HistoryMessage | None = (
             history.get_history_message_format(initial_history_items)
         )
@@ -59,13 +61,13 @@ class ClientSession:
         )
 
         self.send_timeout = send_timeout # used in websocket.wait_for()
-        self.ready = asyncio.Event() # wake up bell for the sender task
+        self.ready = asyncio.Event() # wake-up bell for the sender task
 
         self.sender_task: asyncio.Task[None] | None = None
         self._is_closed = False
 
         self.is_congested = False
-        self.recovery_seconds = CLIENT_RECOVERY_SECONDS
+        self.recovery_seconds = CLIENT_RECOVERY_SECONDS # the minimum time to stay "healthy" in order to recover from congestion state
 
         # Start time of recovery, None if still in congestion mode
         # Used to track if recovery lasted longer than self.recovery_seconds
@@ -88,6 +90,7 @@ class ClientSession:
             return AddResult.CLOSED
 
         # case 1: message is Final
+        # messge is already in FinalHistory, don't add message into provisional queue
         if message["final"]:
             if self.is_congested:
                 # if congested, remove all provisional segment upto current segment ID
@@ -120,7 +123,7 @@ class ClientSession:
         else:
             result = self.provisional_queue.add_coalesced(
                 message,
-                finalized_through=self.history.latest_segment_id,
+                finalized_through_id=self.history.latest_segment_id,
             )
 
         if result in {
@@ -145,6 +148,7 @@ class ClientSession:
         if not self.is_congested:
             return
 
+        # Is congested, trying to recover
         final_lag = self.history.next_sequence - self.next_final
 
         # is only healthy (not no longer congestion state) if final_lag is 0 and queue size is < low
@@ -173,8 +177,7 @@ class ClientSession:
     def _recovery_wait_timeout(self) -> float | None:
         """Returns the remaining time until fully recovered
         
-        Returns None if it is not recovering phase, 
-        i.e. is_congested = True && recovery_started is not None
+        Returns None if it is not in recovering phase
         """
         if (
             self.is_congested == False
@@ -187,9 +190,6 @@ class ClientSession:
 
 
 
-
-    
-
     async def send_message(self, message: OutgoingMessage) -> None:
         """Encode and send message using websocket"""
 
@@ -201,7 +201,7 @@ class ClientSession:
         )
 
     async def sender_loop(self) -> None:
-        """Send initial history, provisionals and cursor based finals."""
+        """Send initial history, then send provisionals and cursor based finals in a loop."""
 
         try:
             if self.initial_history is not None:
@@ -238,7 +238,7 @@ class ClientSession:
                 if final_entry is not None:
                     await self.send_message(final_entry.caption.to_dict())
 
-                    # Advance only after successful sending
+                    # Advance only after successful sending the final segment
                     self.next_final += 1
                     continue
 
@@ -382,8 +382,9 @@ def parse_client_hello(hello:dict[str, Any]) -> tuple[int, int, int]:
 async def handle_client(
     websocket, 
     hello: dict[str, Any], 
-    application: LiveRecallApplication
+    application: LiveRecallApplication # use this to call back methods
 ) -> None:
+    """Parses CLIENT HELLO and attach the client to the application then run the client's tasks"""
 
     client_id = hello.get("client_id")
 
