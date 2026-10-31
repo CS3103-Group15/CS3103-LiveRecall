@@ -136,6 +136,10 @@ async def run_server(port: int) -> None:
         max_size=2**20,
         ping_interval=20,
         ping_timeout=20,
+
+        # small websocket queue size so that when client overloads, our server knows it 
+        # instead of packets hiding inside the websocket queue and not triggering our 
+        # overload backpressure mechanism
         write_limit=4 * 1024
     ):
         print(f"LiveRecall baseline listening on ws://0.0.0.0:{port}", flush=True)
