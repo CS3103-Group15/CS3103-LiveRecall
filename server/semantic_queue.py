@@ -41,6 +41,8 @@ class SemanticQueue:
 
         self.coalesced_count = 0
 
+        self.max = 0
+
     @property
     def size(self) -> int:
         return len(self.items)
@@ -67,6 +69,8 @@ class SemanticQueue:
             return AddResult.OVERFLOW
 
         self.items.append(message)
+
+        self.max = max(self.max, self.size)
         return AddResult.ENQUEUED
 
     def add_coalesced(self, message: CaptionUpdateMessage, finalized_through_id: int) -> AddResult:
@@ -86,6 +90,7 @@ class SemanticQueue:
 
         if removed_count > 0:
             return AddResult.COALESCED
+        self.max = max(self.max, self.size)
 
         return AddResult.ENQUEUED
 
@@ -115,6 +120,8 @@ class SemanticQueue:
 
         removed_count = original_size - self.size
         self.coalesced_count += removed_count
+        self.max = max(self.max, self.size)
+
         return removed_count
 
 

@@ -414,9 +414,13 @@ async def handle_client(
         await client.run() # run the client sender task which sends message in a while loop
 
     finally: # close the connection
+        print(f"--------------------{client.client_id}-------------------------")
+        print(f"MAX QUEUE SIZE reached -- {client.provisional_queue.max}")
+        print(f"COALASED COUNT = {client.provisional_queue.coalesced_count}")
         if client is not None:
             await application.detach_client(client)
         else:
             await websocket.close()
 
         print(f"client disconnected: id={client_id}; clients={application.connected_client_count}", flush=True)
+        print("")
