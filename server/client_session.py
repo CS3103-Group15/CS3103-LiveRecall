@@ -277,8 +277,8 @@ class ClientSession:
                             timeout=timeout,
                         )
                     except asyncio.TimeoutError:
-                        # The loop runs again and _update_recovery_state()
-                        # verifies whether the recovery interval has completed.
+                        # the recovery interval has expired, so evaluate it now
+                        self._update_recovery_state()
                         pass
 
         except LookupError:
