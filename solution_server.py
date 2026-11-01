@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 """
-CS3103 Assignment 4 - LiveRecall naive working baseline.
-
-This starter is intentionally useful but incomplete. It provides the required
-CLI and a basic WebSocket broadcaster so that caption_source.py -> server ->
-browser/load clients works on day one.
-
-It DOES NOT implement the graded networking mechanisms:
-  - revision-state management or deduplication
-  - recent-history recovery or late-join recovery
-  - bounded per-client application queues
-  - slow-client isolation
-  - semantic coalescing / backpressure
-  - constrained-bandwidth overload handling
-
-Required evaluator command:
-    python solution_server.py --port 8765
-
-Teams should replace or substantially extend the implementation while keeping
-this command-line interface and the protocol in the assignment specification.
+The source path validates revision state and fans updates into independent
+per-client queues and sender tasks.
 """
 
 from __future__ import annotations
@@ -30,39 +13,18 @@ from typing import Any
 
 import websockets
 
+from server.client import Client
 from server.history import FinalHistory
-from server.state import CaptionState
+from server.state import CaptionState, CaptionUpdate
 
-# Naive global set of currently connected student clients.
-# There is deliberately no per-client queue or recovery state here.
-CLIENTS: set[Any] = set()
+CLIENTS: set[Client] = set()
 CAPTION_STATE = CaptionState(session="L1")
 FINAL_HISTORY = FinalHistory()
 
-DELIVERY_LOCK = asyncio.Lock()
 
-
-async def broadcast_naively(raw_message: str) -> None:
-    """Send one message directly to every connected client.
-
-    This is intentionally a naive baseline. The source handler waits for all
-    sends to complete. Under pressure, this design may accumulate delay and is
-    not the target architecture for the assignment.
-    """
-    async with DELIVERY_LOCK:
-        if not CLIENTS:
-            return
-
-        snapshot = list(CLIENTS)
-
-        results = await asyncio.gather(
-            *(client.send(raw_message) for client in snapshot),
-            return_exceptions=True,
-        )
-
-        for client, result in zip(snapshot, results):
-            if isinstance(result, Exception):
-                CLIENTS.discard(client)
+def broadcast(caption: CaptionUpdate, raw_message: str) -> None:
+    for client in CLIENTS:
+        client.append(raw_message, segment=caption.segment, revision=caption.revision, final=caption.final)
 
 
 async def handle_source(ws, hello: dict[str, Any]) -> None:
@@ -88,7 +50,7 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
 
                 current_update = json.dumps(accepted.to_dict())
 
-                await broadcast_naively(current_update)
+                broadcast(accepted, current_update)
             elif msg_type == "SOURCE_DONE":
                 # Test-control message. The specification does not require it
                 # to be forwarded to clients.
@@ -133,26 +95,24 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
 
     last_segment, last_revision, history_seconds = parse_client_resume(hello)
 
-    registered = False
+    client: Client | None = None
 
     try:
-        # Prevent concurrent live broadcasts from overtaking
-        # the initial HISTORY response.
-        async with DELIVERY_LOCK:
-            history_items = FINAL_HISTORY.get_recent(
-                seconds=history_seconds,
-                last_segment=last_segment,
-                last_revision=last_revision,
-            )
+        history_items = FINAL_HISTORY.get_recent(
+            seconds=history_seconds,
+            last_segment=last_segment,
+            last_revision=last_revision,
+        )
 
-            await ws.send(json.dumps({
-                "type": "HISTORY",
-                "items": history_items,
-            }))
-
-            # Registration occurs before releasing the lock.
-            CLIENTS.add(ws)
-            registered = True
+        client = Client(ws, client_id=client_id)
+        client.append(json.dumps({"type": "HISTORY", "items": history_items}))
+        # HISTORY contains finals only. Replaying the latest active state after
+        # it lets a reconnecting/late client converge even if overload forced
+        # it off the previous socket mid-segment.
+        for active in sorted(CAPTION_STATE.active.values(), key=lambda c: c.segment):
+            client.append(json.dumps(active.to_dict()), segment=active.segment, revision=active.revision, final=active.final)
+        CLIENTS.add(client)
+        client.start()
 
         print(
             f"client connected: id={client_id}; "
@@ -161,12 +121,26 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
             flush=True,
         )
 
-        # Keep the client connection open.
-        async for _ in ws:
+        # Keep the client connection open. Code 1013 is used deliberately when
+        # this client's bounded queue saturates, so treat that close as normal
+        # lifecycle rather than logging a failed connection handler.
+        try:
+            async for _ in ws:
+                pass
+        except websockets.exceptions.ConnectionClosed:
             pass
     finally:
-        if registered:
-            CLIENTS.discard(ws)
+        if client is not None:
+            CLIENTS.discard(client)
+            await client.stop()
+            if client.coalesced_count or client.overflowed:
+                print(
+                    f"client delivery: id={client_id}; "
+                    f"sent={client.sent_count}; "
+                    f"coalesced={client.coalesced_count}; "
+                    f"overflowed={client.overflowed}",
+                    flush=True,
+                )
         print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}", flush=True)
 
 
@@ -193,10 +167,12 @@ async def main_async(port: int) -> None:
         "0.0.0.0",
         port,
         max_size=2**20,
+        write_limit=16 * 1024,
+        close_timeout=5,
         ping_interval=20,
         ping_timeout=20,
     ):
-        print(f"LiveRecall baseline listening on ws://0.0.0.0:{port}", flush=True)
+        print(f"LiveRecall listening on ws://0.0.0.0:{port}", flush=True)
         await asyncio.Future()
 
 
