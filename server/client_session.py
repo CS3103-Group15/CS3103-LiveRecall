@@ -228,7 +228,7 @@ class ClientSession:
 
                     if provisional is not None:
                         await self.send_message(provisional)
-                        # on popping of provisional from queue, check if is in recovery state
+                        # on popping of provisional from queue, check if is in recovery state becaue the provisional queue may now be low enough to recover
                         self._update_recovery_state()
 
                     continue
@@ -240,10 +240,17 @@ class ClientSession:
 
                     # Advance only after successful sending the final segment
                     self.next_final += 1
+
+                    # Also check for recovery whem sending "final" segment
+                    self._update_recovery_state()
                     continue
 
                 # --------------------- No work --------------------- 
                 # final_entry is None && provisional is None -- fully caught up
+
+                # evaluate recovery before sleeping. This also completes recovery
+                # after the recovery timeout wakes the loop.
+                self._update_recovery_state()
 
                 # Clear the event flag and then recheck to avoid missing a wake-up.
                 self.ready.clear()
@@ -270,7 +277,8 @@ class ClientSession:
                             timeout=timeout,
                         )
                     except asyncio.TimeoutError:
-                        # Loop again so the recovery duration is evaluated.
+                        # The loop runs again and _update_recovery_state()
+                        # verifies whether the recovery interval has completed.
                         pass
 
         except LookupError:
@@ -414,10 +422,11 @@ async def handle_client(
         await client.run() # run the client sender task which sends message in a while loop
 
     finally: # close the connection
-        print(f"--------------------{client.client_id}-------------------------")
-        print(f"MAX QUEUE SIZE reached -- {client.provisional_queue.max}")
-        print(f"COALASED COUNT = {client.provisional_queue.coalesced_count}")
         if client is not None:
+            # print out for testing :)
+            print(f"--------------------{client.client_id}-------------------------")
+            print(f"MAX QUEUE SIZE reached -- {client.provisional_queue.max}")
+            print(f"COALASED COUNT = {client.provisional_queue.coalesced_count}")
             await application.detach_client(client)
         else:
             await websocket.close()
