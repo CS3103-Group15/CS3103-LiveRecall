@@ -22,7 +22,7 @@ class ClientSession:
                  high_pending=32, low_pending=4,
                  high_bytes=128 * 1024, low_bytes=32 * 1024,
                  lag_seconds=0.25, slow_send_seconds=0.1,
-                 recovery_seconds=0.5):
+                 recovery_seconds=0.5, feedback_window=1):
         self.client_id = client_id
         self.websocket = websocket
         self.history = history
@@ -53,6 +53,15 @@ class ClientSession:
         self.coalesced_count = 0
         self.congestion_count = 0
         self.recovery_count = 0
+        # Standard WebSocket control frames provide transport progress feedback
+        # without changing the required caption protocol or client programs.
+        self.feedback_window = feedback_window
+        self.feedback_messages = 0
+        self.feedback_started = None
+        self.feedback_baseline = None
+        self.feedback_hold_until = 0.0
+        self.feedback_checks = 0
+        self.feedback_delays = 0
 
     @property
     def is_closed(self):
@@ -108,7 +117,10 @@ class ClientSession:
         in_flight_age = now - self.send_started if self.send_started is not None else 0.0
         buffered = self.transport_bytes()
         final_lag = self.history.next_sequence - self.next_final
-        pressure = (len(self.outgoing_queue) >= self.high_pending or
+        feedback_slow = (self.feedback_started is not None and
+                         self.feedback_baseline is not None and
+                         now - self.feedback_started >= self.feedback_threshold())
+        pressure = (feedback_slow or len(self.outgoing_queue) >= self.high_pending or
                     self.outgoing_bytes >= self.high_bytes or
                     oldest_age >= self.lag_seconds or
                     in_flight_age >= self.slow_send_seconds or
@@ -121,7 +133,8 @@ class ClientSession:
             if (not pressure and len(self.outgoing_queue) <= self.low_pending and
                     self.outgoing_bytes <= self.low_bytes and final_lag == 0 and
                     buffered <= 8192 and self.send_started is None and
-                    now - self.last_pressure >= self.recovery_seconds):
+                    now - self.last_pressure >= self.recovery_seconds and
+                    now >= self.feedback_hold_until):
                 self.congested = False
                 self.recovery_count += 1
 
@@ -171,6 +184,45 @@ class ClientSession:
         if self.semantic_backpressure and now - started >= self.slow_send_seconds:
             self.enter_congestion(now)
             self.compact()
+        await self.delivery_checkpoint()
+
+    def feedback_threshold(self):
+        # Compare against this connection's best RTT: ordinary propagation
+        # delay alone shouldn't permanently classify a link as overloaded.
+        return max(self.slow_send_seconds, 4 * (self.feedback_baseline or 0.0))
+
+    async def delivery_checkpoint(self):
+        if not self.semantic_backpressure or not callable(getattr(self.websocket, "ping", None)):
+            return
+        self.feedback_messages += 1
+        if self.feedback_messages < self.feedback_window:
+            return
+        self.feedback_messages = 0
+        started = time.monotonic()
+        self.feedback_started = started
+        try:
+            pong = await self.websocket.ping()
+            await asyncio.wait_for(asyncio.shield(pong), timeout=self.send_timeout)
+        finally:
+            self.feedback_started = None
+        elapsed = time.monotonic() - started
+        self.feedback_checks += 1
+        previous_baseline = self.feedback_baseline
+        if previous_baseline is None:
+            self.feedback_baseline = elapsed
+        else:
+            threshold = self.feedback_threshold()
+            self.feedback_baseline = min(previous_baseline, elapsed)
+            if elapsed >= threshold:
+                now = time.monotonic()
+                self.feedback_delays += 1
+                self.enter_congestion(now)
+                # A single fast pong isn't proof of sustained receive capacity.
+                # Give the receiver time to drain before probing full revisions.
+                self.feedback_hold_until = max(
+                    self.feedback_hold_until,
+                    now + min(60.0, max(self.recovery_seconds, 16 * elapsed)))
+                self.compact()
 
     async def sender_loop(self):
         try:
@@ -185,6 +237,20 @@ class ClientSession:
                 # final; never send a later segment ahead of an earlier final.
                 if self.outgoing_queue and (final is None or
                         self.outgoing_queue[0][0] <= final.caption.segment_id):
+                    if self.congested:
+                        # Keep a brief replacement window for the latest
+                        # provisional too. Otherwise fast transport feedback
+                        # can release every new revision into a slow reader's
+                        # buffers even while congestion mode is active.
+                        remaining = self.lag_seconds - (
+                            time.monotonic() - self.outgoing_queue[0][3])
+                        if remaining > 0:
+                            self.ready.clear()
+                            try:
+                                await asyncio.wait_for(self.ready.wait(), remaining)
+                            except asyncio.TimeoutError:
+                                pass
+                            continue
                     _, raw, size, _ = self.outgoing_queue.popleft()
                     self.outgoing_bytes -= size
                     await self.send(raw)
@@ -265,4 +331,6 @@ async def handle_client(websocket, hello: dict[str, Any],
               f"congestion_entries={client.congestion_count}; "
               f"recoveries={client.recovery_count}; "
               f"coalesced={client.coalesced_count}; "
+              f"feedback_checks={client.feedback_checks}; "
+              f"feedback_delays={client.feedback_delays}; "
               f"failure={client.failure}", flush=True)
