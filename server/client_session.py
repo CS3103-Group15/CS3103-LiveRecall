@@ -10,7 +10,9 @@ from server.config import (
     CLIENT_QUEUE_LOW_WATERMARK,
     CLIENT_QUEUE_MAXSIZE,
     CLIENT_SEND_TIMEOUT,
-    CLIENT_RECOVERY_SECONDS
+    CLIENT_RECOVERY_SECONDS,
+    CLIENT_DELIVERY_WINDOW,
+    CLIENT_PROGRESS_TIMEOUT
 )
 from server.history import FinalHistory
 from server.protocol import (
@@ -36,7 +38,9 @@ class ClientSession:
         queue_max_size: int = CLIENT_QUEUE_MAXSIZE,
         high_watermark: int = CLIENT_QUEUE_HIGH_WATERMARK,
         low_watermark: int = CLIENT_QUEUE_LOW_WATERMARK,
-        send_timeout: float = CLIENT_SEND_TIMEOUT
+        send_timeout: float = CLIENT_SEND_TIMEOUT,
+        delivery_window: int = CLIENT_DELIVERY_WINDOW,
+        progress_timeout: float = CLIENT_PROGRESS_TIMEOUT,
     ) -> None:
         self.client_id = client_id
         self.websocket = websocket
@@ -76,6 +80,9 @@ class ClientSession:
         self.congestion_count = 0 # number of times client got into congestion state
         self.recovery_count = 0 # number of times client recovery from congestion
 
+        self.delivery_window = delivery_window
+        self.progress_timeout = progress_timeout
+        self.messages_since_progress_check = 0
 
     @property
     def is_closed(self):
@@ -199,6 +206,20 @@ class ClientSession:
             self.websocket.send(encoded),
             timeout=self.send_timeout,
         )
+
+        self.messages_since_progress_check += 1
+
+        if self.messages_since_progress_check >= self.delivery_window:
+            # A pong confirms that the peer's WebSocket implementation has
+            # processed the ping after the preceding ordered data frames
+            pong_waiter = await self.websocket.ping()
+
+            await asyncio.wait_for(
+                pong_waiter,
+                timeout=self.progress_timeout,
+            )
+
+            self.messages_since_progress_check = 0
 
     async def sender_loop(self) -> None:
         """Send initial history, then send provisionals and cursor based finals in a loop."""

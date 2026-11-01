@@ -4,3 +4,7 @@ CLIENT_QUEUE_LOW_WATERMARK = 32
 
 CLIENT_SEND_TIMEOUT = 10.0
 CLIENT_RECOVERY_SECONDS = 1.0
+
+# to prevent websocket write too much and hides congestion from server
+CLIENT_DELIVERY_WINDOW = 8
+CLIENT_PROGRESS_TIMEOUT = 5.0

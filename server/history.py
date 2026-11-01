@@ -35,6 +35,7 @@ class FinalHistory:
         self.remove_old_entries(now=now)
 
         if len(self.items) >= self.max_items:
+            print("------------- OVERFLOW IN FINAL HISTORY -- DUE TO > 20000 ---------")
             raise OverflowError(
                 "Final history capacity exhausted; "
             )
