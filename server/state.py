@@ -1,5 +1,6 @@
 import math
-from typing import Any
+from typing import Any, Callable
+from server.protocol import CaptionUpdateMessage
 
 class CaptionSegment:
     def __init__(self, session:str, segment:int, revision:int, source_ts:float, final:bool, text:str):
@@ -10,7 +11,7 @@ class CaptionSegment:
         self.final = final
         self.text = text
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> CaptionUpdateMessage:
         return {
             "type": "CAPTION_UPDATE",
             "session": self.session,
@@ -29,7 +30,8 @@ class CaptionState:
         self.accepted_count = 0
         self.rejected_count = 0
 
-    def accept_update(self, message:dict[str, Any]) -> CaptionSegment | None:
+    def accept_update(self, message:dict[str, Any],
+                      store_final: Callable[[CaptionSegment], None] | None = None) -> CaptionSegment | None:
         caption_update = self.parse_update(message)
 
         if caption_update is None:
@@ -48,6 +50,9 @@ class CaptionState:
                 return None
 
         if caption_update.final:
+            # Store before committing state so capacity failures leave it retryable.
+            if store_final is not None:
+                store_final(caption_update)
             self.highest_finalized_segment = caption_update.segment_id
             self.active.pop(caption_update.segment_id, None)
         else:
