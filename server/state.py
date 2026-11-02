@@ -1,3 +1,4 @@
+# Details about the caption being sent by the caption source
 import math
 from typing import Any, Callable
 from server.protocol import CaptionUpdateMessage

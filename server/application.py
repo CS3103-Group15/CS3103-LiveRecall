@@ -16,8 +16,11 @@ from server.state import CaptionState, CaptionSegment
 
 class LiveRecallApplication:
     def __init__(self, semantic_backpressure=True):
+        # Checks correct revisions for stage 2
         self.caption_state = CaptionState(session="L1")
+        # Stores finalized segments for stage 3
         self.final_history = FinalHistory()
+        # Distributes caption updates to independent client sessions for stage 5
         self.delivery_hub = DeliveryHub()
         self.semantic_backpressure = semantic_backpressure
         self._lock = asyncio.Lock()
@@ -26,6 +29,7 @@ class LiveRecallApplication:
     def connected_client_count(self):
         return self.delivery_hub.client_count
 
+    # Identifies and handles whether it is the caption source or a client that is connecting to the server's port
     async def handle_connection(self, websocket: Any) -> None:
         try:
             raw = await asyncio.wait_for(websocket.recv(), timeout=5)
@@ -43,6 +47,7 @@ class LiveRecallApplication:
         else:
             await websocket.close(code=1008, reason="Expected SOURCE_HELLO or CLIENT_HELLO")
 
+    # Processes a caption update from the source, updating the caption state and final history, and publishing to clients
     async def process_source_update(self, message: dict[str, Any]) -> CaptionSegment | None:
         async with self._lock:
             # Persist before committing final state; a capacity failure remains retryable.
@@ -70,7 +75,7 @@ class LiveRecallApplication:
             self.delivery_hub.unregister_client(client)
         await client.close()
 
-
+# Create one instance of the server application
 async def run_server(port: int, semantic_backpressure: bool = True) -> None:
     application = LiveRecallApplication(semantic_backpressure)
     async with websockets.serve(

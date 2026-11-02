@@ -1,0 +1,198 @@
+{
+  "tests": {
+    "t1": {
+      "runs": 3,
+      "final_completeness_runs": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "medians": {
+        "final_completeness_pct": 100.0,
+        "fresh_pct": 100.0,
+        "fresh_final_pct": 100.0,
+        "normal_update_coverage_pct": 100.0,
+        "p50_ms": 3.2565,
+        "p95_ms": 5.4721,
+        "p99_ms": 7.905159999999998
+      },
+      "duplicates": 0,
+      "stale": 0,
+      "connection_errors": 0,
+      "normal_clients": {
+        "p50_ms": 3.2565,
+        "p95_ms": 5.4721,
+        "fresh_pct": 100.0,
+        "messages": 1320
+      }
+    },
+    "t2": {
+      "runs": 3,
+      "final_completeness_runs": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "medians": {
+        "final_completeness_pct": 100.0,
+        "fresh_pct": 100.0,
+        "fresh_final_pct": 100.0,
+        "normal_update_coverage_pct": 100.0,
+        "p50_ms": 10.4025,
+        "p95_ms": 17.781049999999997,
+        "p99_ms": 24.841260000000005
+      },
+      "duplicates": 0,
+      "stale": 0,
+      "connection_errors": 0,
+      "normal_clients": {
+        "p50_ms": 10.4025,
+        "p95_ms": 17.781049999999997,
+        "fresh_pct": 100.0,
+        "messages": 14700
+      }
+    },
+    "t3": {
+      "runs": 3,
+      "final_completeness_runs": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "medians": {
+        "final_completeness_pct": 100.0,
+        "fresh_pct": 97.07112970711297,
+        "fresh_final_pct": 94.47368421052632,
+        "normal_update_coverage_pct": 94.34210526315789,
+        "p50_ms": 10.375499999999999,
+        "p95_ms": 21.329199999999997,
+        "p99_ms": 5818.82287
+      },
+      "duplicates": 0,
+      "stale": 0,
+      "connection_errors": 0,
+      "normal_clients": {
+        "p50_ms": 10.146,
+        "p95_ms": 17.8101,
+        "fresh_pct": 100.0,
+        "messages": 20520
+      },
+      "slow_clients": {
+        "p50_ms": 2255.0045,
+        "p95_ms": 7834.151849999998,
+        "fresh_pct": 36.36363636363637,
+        "messages": 990
+      }
+    },
+    "t4": {
+      "runs": 3,
+      "final_completeness_runs": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "medians": {
+        "final_completeness_pct": 100.0,
+        "fresh_pct": 100.0,
+        "fresh_final_pct": 98.42105263157895,
+        "normal_update_coverage_pct": 98.33333333333333,
+        "p50_ms": 9.1025,
+        "p95_ms": 16.668,
+        "p99_ms": 24.89259000000005
+      },
+      "duplicates": 0,
+      "stale": 0,
+      "connection_errors": 0,
+      "normal_clients": {
+        "p50_ms": 9.1025,
+        "p95_ms": 16.668,
+        "fresh_pct": 100.0,
+        "messages": 22420
+      },
+      "recovery_p95_ms": 6.9721
+    },
+    "t5": {
+      "runs": 3,
+      "final_completeness_runs": [
+        100.0,
+        100.0,
+        99.89795918367346
+      ],
+      "medians": {
+        "final_completeness_pct": 100.0,
+        "fresh_pct": 86.75489445477415,
+        "fresh_final_pct": 85.79591836734694,
+        "normal_update_coverage_pct": 62.29931972789116,
+        "p50_ms": 279.127,
+        "p95_ms": 763.9243,
+        "p99_ms": 1037.29918
+      },
+      "duplicates": 0,
+      "stale": 0,
+      "connection_errors": 0,
+      "normal_clients": {
+        "p50_ms": 279.127,
+        "p95_ms": 763.9243,
+        "fresh_pct": 86.75489445477415,
+        "messages": 9158
+      }
+    },
+    "bandwidth": {
+      "runs": 3,
+      "final_completeness_runs": [
+        99.59183673469387,
+        100.0,
+        100.0
+      ],
+      "medians": {
+        "final_completeness_pct": 100.0,
+        "fresh_pct": 31.26662386499129,
+        "fresh_final_pct": 27.0,
+        "normal_update_coverage_pct": 74.96598639455782,
+        "p50_ms": 569.502,
+        "p95_ms": 922.9220999999999,
+        "p99_ms": 1201.205669999998
+      },
+      "duplicates": 0,
+      "stale": 0,
+      "connection_errors": 0,
+      "normal_clients": {
+        "p50_ms": 569.502,
+        "p95_ms": 922.9220999999999,
+        "fresh_pct": 31.26662386499129,
+        "messages": 11020
+      }
+    }
+  },
+  "comparison_t5": {
+    "final_completeness_pct": {
+      "before": 100.0,
+      "after": 100.0
+    },
+    "fresh_pct": {
+      "before": 77.82573509576477,
+      "after": 86.75489445477415
+    },
+    "fresh_final_pct": {
+      "before": 76.0,
+      "after": 85.79591836734694
+    },
+    "normal_update_coverage_pct": {
+      "before": 50.435374149659864,
+      "after": 62.29931972789116
+    },
+    "p50_ms": {
+      "before": 340.5495,
+      "after": 279.127
+    },
+    "p95_ms": {
+      "before": 941.4114500000007,
+      "after": 763.9243
+    },
+    "p99_ms": {
+      "before": 1193.0868999999998,
+      "after": 1037.29918
+    }
+  },
+  "note": "Medians are per metric across independent runs; individual runs remain in the raw archive."
+}

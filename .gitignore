@@ -28,3 +28,11 @@ Thumbs.db
 # Local temporary files
 *.swp
 *~
+
+# Ad-hoc experiments; keep the canonical results/final files only
+/demo_results*.csv
+/demo_results*.json
+/results/*
+!/results/final/
+/.validation-work/
+/dist/
