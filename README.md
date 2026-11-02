@@ -6,8 +6,8 @@ LiveRecall distributes revision-based lecture captions to students. Each browser
 
 - **Run the application:** the commands below.
 - **Read the final measurements:** [results/final/SUMMARY.md](results/final/SUMMARY.md).
-- **Inspect the technical report:** [report.pdf](report.pdf).
-- **Prepare the required demo:** [docs/DEMO_CHECKLIST.md](docs/DEMO_CHECKLIST.md).
+- **Technical report:** `report.pdf` is temporarily removed; add the required 4–5-page report before submission.
+- **Required demo video (5–7 minutes):** show live provisional/final revision replacement, local 15/30/60-second recall, and disconnect/reconnect recovery using the supplied caption source. Also demonstrate late joining and prepare the code/results for the viva.
 - **Team declarations:** [AI_USAGE.md](AI_USAGE.md) and [CONTRIBUTIONS.md](CONTRIBUTIONS.md). Contribution names/percentages must be confirmed by the team before submission.
 
 The current permanent Ubuntu project is `/home/mininet/CS3103-LiveRecall` in the existing VMware Mininet VM. Mininet itself does not have to run: the server and simulated clients run directly inside Ubuntu, and impairment is applied to `lo`.
@@ -61,43 +61,36 @@ For a repeatable second lecture/demo, restart the server and reload the browser 
 
 Do not start a separate server for `run_demo.py`; it starts and stops its own server/source/clients. Port 19877 avoids clashes with the visual demo on 8765.
 
+Run all components inside the same Ubuntu VM. Use three independent runs and report their medians. Write new measurements separately from the saved final evidence.
+
 ```bash
 source .venv/bin/activate
-sudo -v
-python tools/run_public_tests.py --extended
+mkdir -p results/recheck
 ```
 
-The wrapper invokes the unchanged school harness, runs every required test three times, resets network impairment in `finally`, and writes one canonical `results/final/` set. `--extended` adds a separately labelled 512 kbit/s bandwidth experiment; it is not a sixth required public test. Run inside the same Ubuntu VM for all components. Close unrelated benchmarks first. Refresh `sudo -v` before starting; the profile commands need sudo.
+Required public workloads:
 
-Equivalent required public workloads:
 
 ```bash
-python run_demo.py --clients 20 --duration 20 --runs 3 --port 19877 --output-stem results/t1
-python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/t2
-python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --slow-percent 10 --slow-ms 500 --output-stem results/t3
-python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --disconnect-percent 20 --disconnect-at 15 --disconnect-seconds 5 --output-stem results/t4
+python run_demo.py --clients 20 --duration 20 --runs 3 --port 19877 --output-stem results/recheck/t1
+python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/recheck/t2
+python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --slow-percent 10 --slow-ms 500 --output-stem results/recheck/t3
+python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --disconnect-percent 20 --disconnect-at 15 --disconnect-seconds 5 --output-stem results/recheck/t4
 sudo bash network_profiles/delay_loss.sh lo
-python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/t5
+python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/recheck/t5
 sudo bash network_profiles/reset.sh lo
 ```
 
-Always reset the profile even if a manual test fails. For the final report, use the canonical wrapper results rather than mixing manually generated files with earlier runs. Its raw archive includes all per-run CSV/JSON, exact commands/hashes, profiles, resource samples and logs. `comparison.csv` compares the previous sender with the final sender on the same VM/filesystem and T5 settings. Rerunning the wrapper updates the final suite but does not recreate that historical baseline automatically.
+Always reset the profile even if a manual test fails. Saved measurements in `results/final/` are the published snapshot; do not mix them with new runs. The raw archive includes all per-run CSV/JSON, exact commands/hashes, profiles, resource samples and logs. `comparison.csv` compares the earlier sender with the final sender on the same VM/filesystem and T5 settings. Historical development-test logs are evidence of checks already performed; their helper/test source is available in Git history rather than the minimal submission tree.
 
-## Checks
+## Submission check
 
 ```bash
-python -m unittest discover -s tests -v
 python submission_check.py --port 19878
 python submission_check.py --final --port 19878
 ```
 
-Optional browser-state unit tests, if Node.js is available on a development machine:
-
-```bash
-node --test tests/client.test.cjs
-```
-
-Node.js is not needed to install or run the submitted server/browser application. `submission_check.py --final` checks file presence/startup, not the truth of team declarations or completion of the video/viva.
+The final check requires `report.pdf`, which is temporarily removed. It checks file presence/startup, not the truth of team declarations or completion of the video/viva.
 
 ## Code and protocol flow
 
@@ -106,6 +99,8 @@ Node.js is not needed to install or run the submitted server/browser application
 Accepted source revisions pass through `state.py`. Duplicate/stale revisions and revisions after a final are rejected. Finals are committed to `history.py` before publication. Unrecognized extra source fields are ignored. The implementation does not assume three revisions per segment.
 
 `delivery_hub.py` publishes accepted updates to registered sessions without waiting for sockets. Each session has an independent sender and a bounded provisional queue. Finals exist once in shared history; a per-session `next_final` sequence bookmark tracks the next final to send. Initial `HISTORY`, bookmark capture and registration happen atomically, and history is sent before live work.
+
+`server/delivery_policy.py` separates fixed queue/timeout/congestion settings (`DeliveryPolicy`) from mutable ping/pong batch progress (`FeedbackState`). `ClientSession` keeps 20 direct fields for its connection, queue, bookmark and sender lifecycle. Grouping settings does not remove delivery safeguards; each client has independent feedback state even if it shares an immutable policy.
 
 The browser checkpoint describes the last final the browser actually accepted. It differs from the server delivery bookmark, which tracks sending progress. The checkpoint survives a WebSocket reconnect in the same page; a page reload starts fresh and requests recent history.
 
@@ -126,43 +121,11 @@ Completeness and freshness are different: a final may arrive correctly but later
 
 Public-test success does not guarantee hidden workload marks. The team must review the report/declarations, agree contribution percentages, record the required 5–7 minute demo and attend the viva. Optional ASR is outside this mandatory implementation.
 
-## Rebuilding the report (optional development dependency)
+## Submission checklist
 
-The submitted PDF is already built. To regenerate it after updating the measured final results:
+Include the application source (`solution_server.py`, `server/`, `client/`), `requirements.txt`, `README.md`, `AI_USAGE.md`, `CONTRIBUTIONS.md`, and the required `report.pdf`. Keep the supplied deterministic source, transcript, unchanged public test programs and network profiles so the experiments can be reproduced. Saved results support the report and viva. Submit the required video separately as instructed by the course.
 
-```bash
-python -m pip install reportlab
-python tools/build_report.py
-```
-
-ReportLab is a report-authoring dependency, not a dependency of the required server startup path. Review the PDF visually and keep it to 4–5 pages before submission.
-
-## Create the group ZIP
-
-```bash
-python tools/package_submission.py
-```
-
-The packager excludes Git metadata, environments, caches and ad-hoc experiments. It checks required files and refuses to call an unfinished contribution statement ready. While team details are deferred, use `--allow-team-draft` to create an explicitly labelled review package. Complete the team agreement and record the separate required video before final submission.
-
-To audit the saved results without rerunning networking tests:
-
-```bash
-python tools/verify_results.py
-```
-
-This reruns the original analyser on the archived CSVs, checks the JSON summaries and measured source hashes, and checks full unconstrained revision coverage. It reports low-completeness workloads honestly rather than replacing them with a median.
-
-### Rechecking without mixing published evidence
-
-The final folder is a published snapshot. For another complete run, keep it intact and use a separate scratch output:
-
-```bash
-sudo -v
-python tools/run_public_tests.py --extended --output /tmp/liverecall-recheck
-```
-
-Use a fresh scratch directory for a repeat after an interrupted run. Do not combine partial files or carry a historical comparison across different machines/dependency versions. Review a new result set before replacing the published one.
+Complete the team contribution agreement and restore the report before submission. Exclude `.git`, `.venv`, Python caches and any fresh ad-hoc test files from a submission ZIP. A repository submission should retain its Git history.
 
 ### Reproduce the controlled T5 baseline
 
