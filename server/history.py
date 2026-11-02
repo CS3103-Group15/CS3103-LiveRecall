@@ -1,3 +1,4 @@
+# How the server stores finalized caption segments for later retrieval by clients that have fallen behind
 from collections import deque
 import time
 import json

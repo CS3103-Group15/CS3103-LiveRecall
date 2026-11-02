@@ -1,22 +1,8 @@
-/*
- * Working but deliberately naive LiveRecall browser starter.
- *
- * Provided mechanical behavior:
- *   - opens a WebSocket
- *   - sends CLIENT_HELLO
- *   - visibly appends every received CAPTION_UPDATE
- *   - displays whether an update is provisional/final
- *
- * Graded TODOs:
- *   - replace revisions rather than appending duplicates
- *   - maintain >=60 s of finalized local state
- *   - implement 30 s default recall + 15/30/60 s views
- *   - automatic reconnect + correct resume state
- *   - HISTORY merge/deduplication
- *   - usable final UI
- */
+/* Live captions, bounded local recall and incremental reconnect recovery. */
 
-const WS_URL = "ws://127.0.0.1:8765";
+const WS_HOST = window.location.hostname || "127.0.0.1";
+const WS_SCHEME = window.location.protocol === "https:" ? "wss" : "ws";
+const WS_URL = `${WS_SCHEME}://${WS_HOST}:8765`;
 const statusEl = document.getElementById("status");
 const liveEl = document.getElementById("live");
 const recallEl = document.getElementById("recall");
@@ -107,6 +93,14 @@ function updateFinalCheckpoint(msg) {
   if (msg.segment > lastFinalSegment || (msg.segment === lastFinalSegment && msg.revision > lastFinalRevision)) {
     lastFinalSegment = msg.segment;
     lastFinalRevision = msg.revision;
+    // A history gap can leave an old provisional behind after a long outage.
+    // Completed later segments make that earlier provisional obsolete.
+    for (const [segment, caption] of captions) {
+      if (!caption.final && segment < lastFinalSegment) {
+        caption.element.remove();
+        captions.delete(segment);
+      }
+    }
   }
 }
 

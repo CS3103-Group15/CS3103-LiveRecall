@@ -156,7 +156,7 @@ class BackpressureTests(unittest.IsolatedAsyncioTestCase):
             async def send(self, raw):
                 await asyncio.sleep(0.01)
                 await super().send(raw)
-        d = ClientSession(SlowSocket(), h, [], slow_send_seconds=0.001)
+        d = ClientSession(SlowSocket(), h, [], slow_send_seconds=0.001, lag_seconds=0.005)
         await d.send('{}')
         self.assertTrue(d.congested)
 
