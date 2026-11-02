@@ -40,17 +40,16 @@ async def handle_source(ws, hello: dict[str, Any]) -> None:
 
             msg_type = msg.get("type")
             if msg_type == "CAPTION_UPDATE":
-                accepted = CAPTION_STATE.accept_update(msg)
+                accepted = CAPTION_STATE.accept_update(msg, FINAL_HISTORY)
 
                 if accepted is None:
                     continue
 
-                if accepted.final:
-                    FINAL_HISTORY.add(accepted)
-
                 current_update = json.dumps(accepted.to_dict())
 
                 broadcast(accepted, current_update)
+                # Let independent senders run during buffered source bursts.
+                await asyncio.sleep(0)
             elif msg_type == "SOURCE_DONE":
                 # Test-control message. The specification does not require it
                 # to be forwarded to clients.
@@ -104,7 +103,7 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
             last_revision=last_revision,
         )
 
-        client = Client(ws, client_id=client_id)
+        client = Client(ws, client_id=client_id, history=FINAL_HISTORY)
         client.append(json.dumps({"type": "HISTORY", "items": history_items}))
         # HISTORY contains finals only. Replaying the latest active state after
         # it lets a reconnecting/late client converge even if overload forced
@@ -133,14 +132,6 @@ async def handle_client(ws, hello: dict[str, Any]) -> None:
         if client is not None:
             CLIENTS.discard(client)
             await client.stop()
-            if client.coalesced_count or client.overflowed:
-                print(
-                    f"client delivery: id={client_id}; "
-                    f"sent={client.sent_count}; "
-                    f"coalesced={client.coalesced_count}; "
-                    f"overflowed={client.overflowed}",
-                    flush=True,
-                )
         print(f"client disconnected: id={client_id}; clients={len(CLIENTS)}", flush=True)
 
 
@@ -167,8 +158,6 @@ async def main_async(port: int) -> None:
         "0.0.0.0",
         port,
         max_size=2**20,
-        write_limit=16 * 1024,
-        close_timeout=5,
         ping_interval=20,
         ping_timeout=20,
     ):

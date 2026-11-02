@@ -29,7 +29,7 @@ class CaptionState:
         self.accepted_count = 0
         self.rejected_count = 0
 
-    def accept_update(self, message:dict[str, Any]) -> CaptionUpdate | None:
+    def accept_update(self, message:dict[str, Any], history) -> CaptionUpdate | None:
         caption_update = self.parse_update(message)
 
         if caption_update is None:
@@ -48,6 +48,8 @@ class CaptionState:
                 return None
 
         if caption_update.final:
+            # If storage overflows, leave finalized and active state unchanged.
+            history.add(caption_update)
             self.highest_finalized_segment = caption_update.segment
             self.active.pop(caption_update.segment, None)
         else:
@@ -96,4 +98,3 @@ class CaptionState:
             final=final,
             text=text
         )
-    
