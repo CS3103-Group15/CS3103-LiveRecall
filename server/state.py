@@ -45,15 +45,13 @@ class CaptionState:
 
         previous = self.active.get(caption_update.segment_id)
 
-        if previous is not None:
-            if caption_update.revision <= previous.revision:
-                self.rejected_count += 1
-                return None
+        if previous and caption_update.revision <= previous.revision:
+            self.rejected_count += 1
+            return None
 
         if caption_update.final:
             # Store before committing state so capacity failures leave it retryable.
-            if store_final is not None:
-                store_final(caption_update)
+            store_final(caption_update)
             self.highest_finalized_segment = caption_update.segment_id
             self.active.pop(caption_update.segment_id, None)
         else:
