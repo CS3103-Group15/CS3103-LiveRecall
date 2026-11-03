@@ -34,5 +34,6 @@ Thumbs.db
 /demo_results*.json
 /results/*
 !/results/final/
+!/results/stage*
 /.validation-work/
 /dist/

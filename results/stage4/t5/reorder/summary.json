@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-11-03T10:45:27.973512+00:00",
+  "run_count": 3,
+  "run_files": [
+    "reorder_run01.json",
+    "reorder_run02.json",
+    "reorder_run03.json"
+  ],
+  "metrics": {
+    "clients": {
+      "label": "Clients observed",
+      "unit": "count",
+      "values": [
+        100,
+        100,
+        100
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 0
+    },
+    "p50_ms": {
+      "label": "P50 caption age",
+      "unit": "ms",
+      "values": [
+        44.976,
+        44.895,
+        44.744
+      ],
+      "observed_runs": 3,
+      "median": 44.895,
+      "decimals": 2
+    },
+    "p95_ms": {
+      "label": "P95 caption age",
+      "unit": "ms",
+      "values": [
+        46.497,
+        46.506,
+        46.0121
+      ],
+      "observed_runs": 3,
+      "median": 46.497,
+      "decimals": 2
+    },
+    "p99_ms": {
+      "label": "P99 caption age",
+      "unit": "ms",
+      "values": [
+        47.47409,
+        47.34107,
+        46.50401
+      ],
+      "observed_runs": 3,
+      "median": 47.34107,
+      "decimals": 2
+    },
+    "fresh_pct": {
+      "label": "Fresh Caption Ratio",
+      "unit": "%",
+      "values": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 2
+    },
+    "fresh_final_pct": {
+      "label": "Fresh Final Caption Ratio",
+      "unit": "%",
+      "values": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 2
+    },
+    "final_completeness_pct": {
+      "label": "Final-caption completeness",
+      "unit": "%",
+      "values": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 2
+    },
+    "normal_update_coverage_pct": {
+      "label": "Normal Update Coverage",
+      "unit": "%",
+      "values": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 2
+    },
+    "duplicates": {
+      "label": "Duplicate messages",
+      "unit": "count",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "observed_runs": 3,
+      "median": 0.0,
+      "decimals": 0
+    },
+    "stale": {
+      "label": "Stale messages",
+      "unit": "count",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "observed_runs": 3,
+      "median": 0.0,
+      "decimals": 0
+    },
+    "connection_errors": {
+      "label": "Connection errors",
+      "unit": "count",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "observed_runs": 3,
+      "median": 0.0,
+      "decimals": 0
+    },
+    "normal_clients.p95_ms": {
+      "label": "Normal-client P95",
+      "unit": "ms",
+      "values": [
+        46.497,
+        46.506,
+        46.0121
+      ],
+      "observed_runs": 3,
+      "median": 46.497,
+      "decimals": 2
+    },
+    "normal_clients.fresh_pct": {
+      "label": "Normal-client freshness",
+      "unit": "%",
+      "values": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 2
+    },
+    "slow_clients.p95_ms": {
+      "label": "Slow-client P95",
+      "unit": "ms",
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "observed_runs": 0,
+      "median": null,
+      "decimals": 2
+    },
+    "slow_clients.fresh_pct": {
+      "label": "Slow-client freshness",
+      "unit": "%",
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "observed_runs": 0,
+      "median": null,
+      "decimals": 2
+    },
+    "recovery_p50_ms": {
+      "label": "Recovery P50",
+      "unit": "ms",
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "observed_runs": 0,
+      "median": null,
+      "decimals": 2
+    },
+    "recovery_p95_ms": {
+      "label": "Recovery P95",
+      "unit": "ms",
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "observed_runs": 0,
+      "median": null,
+      "decimals": 2
+    }
+  }
+}

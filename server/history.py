@@ -15,9 +15,8 @@ class FinalEntry:
         self.stored_at = stored_at
 
 class FinalHistory:
-    def __init__(self, retention_seconds:float=70, max_items:int=20000, max_bytes:int=32 * 1024 * 1024):
+    def __init__(self, retention_seconds:float=70, max_bytes:int=32 * 1024 * 1024):
         self.retention_seconds = retention_seconds
-        self.max_items = max_items
 
         self.items:deque[FinalEntry] = deque()
         self.latest_segment_id = 0
@@ -34,7 +33,7 @@ class FinalHistory:
         self.remove_old_entries()
 
         entry = FinalEntry(caption, now, self.next_sequence)
-        if len(self.items) >= self.max_items or self.total_bytes + entry.size > self.max_bytes:
+        if self.total_bytes + entry.size > self.max_bytes:
             raise OverflowError(
                 "Final history capacity exhausted; "
                 "required retention cannot be guaranteed"
