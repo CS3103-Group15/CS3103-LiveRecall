@@ -18,10 +18,10 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class QueueEntry:
-    segment: int
-    raw: str
-    size: int
-    enqueued_at: float
+    segment: int # segment id
+    raw: str # json serialised caption ready to be sent
+    size: int # number of bytes in raw
+    enqueued_at: float # timestamp when the entry enter the queue - use to measure queueing delay
 
 
 class ClientSession:
@@ -35,58 +35,79 @@ class ClientSession:
                  recovery_seconds=0.5, feedback_window=1,
                  max_feedback_window=8, max_feedback_bytes=64 * 1024,
                  max_provisional_delay=2.0):
-        self.client_id = client_id
+        # Connection & identity
+        self.client_id: int = client_id
         self.websocket = websocket
-        self.history = history
+        self.stopped: bool = False # becomes True when session is shutting down or has closed. Prevents new updates from being accepted
+        self.failure: str | None = None # None when session is healthy. If something fails, it stores the description of the error
+        self.sender_task: asyncio.Task | None = None # the asyncio.Task running the sender_loop()
+
+        # Final caption delivery
+        self.history: FinalHistory = history
         # Captured synchronously with registration: finals already in HISTORY
         # must not be replayed as live updates.
-        self.next_final = history.next_sequence
-        self.initial_history = json.dumps(history.get_history_message_format(history_items))
-        self.outgoing_queue: deque[QueueEntry] = deque()
-        self.outgoing_bytes = 0
-        self.max_pending = max_pending
-        self.max_pending_bytes = max_pending_bytes
-        self.send_timeout = send_timeout
-        self.ready = asyncio.Event()
-        self.failure = None
-        self.sender_task = None
-        self.stopped = False
-        self.semantic_backpressure = semantic_backpressure
-        self.high_pending = min(high_pending, max_pending)
-        self.low_pending = min(low_pending, max(0, self.high_pending - 1))
-        self.high_bytes = min(high_bytes, max_pending_bytes)
-        self.low_bytes = min(low_bytes, max(0, self.high_bytes - 1))
-        self.lag_seconds = lag_seconds
-        self.slow_send_seconds = slow_send_seconds
-        self.recovery_seconds = recovery_seconds
-        self.congested = False
-        self.last_pressure = 0.0
-        self.send_started = None
-        self.coalesced_count = 0
+        self.next_final = history.next_sequence # the client's next final to be sent
+        self.initial_history: str = json.dumps(history.get_history_message_format(history_items))
+
+        # Provisional outgoing queue
+        self.outgoing_queue: deque[QueueEntry] = deque() # provisional queue (no final segment included)
+        self.outgoing_bytes = 0 # provisional queue size in bytes
+        self.max_pending = max_pending # the high ceiling for outgoing_queue before going into congestion mode
+        self.max_pending_bytes = max_pending_bytes # the high ceiling (bytes) for outgoing_queue
+        self.ready = asyncio.Event() # event to wake the sender_loop() when new work becomes available
+        self.provisional_wait_started = None # time when the current congested provisional waiting period began. It prevents continual replacement from postponing delivery forever.
+        self.max_provisional_delay = max_provisional_delay # max time a provisional may be held before it must be sent. Default 2 seconds
+
+        # Sending configuration & state
+        self.send_timeout = send_timeout # Max time allowed for a websocket send OR ping/pong operation. Default 10 seconds
+        self.send_started: float | None = None # Timestamp set while a send operation is running. `None` when no send is in progress. This allows the session to calculate (in_flight_age = now - self.send_started)
+        self.slow_send_seconds: float = slow_send_seconds # Duration after which a websocket send is considered suspiciously slow. Default 0.1s
+        self.slow_send_observations: int = 0 # number of consecutive slow send observed. 2 mildly slow send confirms congestions. 1 severely slow send can trigger congestion mode immediately!!!
+
+        # Congestion config
+        # queue reach high_pending -> enter_congestion() -> compact/coalesce provisionals 
+        # -> queue drop below low_pending -> remain healthy for recovery_seconds -> return to normal mode
+        self.semantic_backpressure = semantic_backpressure # enable/disable backpressure
+        self.high_pending = min(high_pending, max_pending) # number of entry in the queue to enter congestion mode
+        self.low_pending = min(low_pending, max(0, self.high_pending - 1)) # queue count minimum threshold before recovering from congestion
+        self.high_bytes = min(high_bytes, max_pending_bytes) # queue byte size that cause congestion mode
+        self.low_bytes = min(low_bytes, max(0, self.high_bytes - 1)) # queue byte size needed before recover
+        self.lag_seconds = lag_seconds # Age threshold used to decide that queued, in-flight or feedback work is lagging
+        self.recovery_seconds = recovery_seconds # required "quiet" period after the latest "pressure" before leaving congestion mode
+
+        # Congestion runtime state
+        self.congested = False # is congested mode?
+        self.last_pressure = 0.0 # most recent monotonic time at which congestion pressure happen
+        self.coalesced_count = 0 # some metrics :)
         self.congestion_count = 0
         self.recovery_count = 0
+
         # Standard WebSocket control frames provide transport progress feedback
         # without changing the required caption protocol or client programs.
         if not 1 <= feedback_window <= max_feedback_window:
             raise ValueError("Feedback window must be positive and bounded")
         if max_feedback_bytes < 1:
             raise ValueError("Feedback byte limit must be positive")
-        self.feedback_window = feedback_window
-        self.max_feedback_window = max_feedback_window
-        self.max_feedback_bytes = max_feedback_bytes
-        self.feedback_bytes = 0
-        self.update_interval = None
+
+        # Source update rate tracking -- to estimate how fast the source are coming in
         self.last_update_at = None
-        self.provisional_wait_started = None
-        self.max_provisional_delay = max_provisional_delay
-        self.feedback_messages = 0
-        self.feedback_started = None
-        self.feedback_baseline = None
+        self.update_interval = None
+
+        # ping/pong transport feedback
+        self.feedback_window: int = feedback_window # minimum number of sent message before requesting ping pong feedback. default 1.
+                                               # the session initially checks transport progress after every sent message, 
+                                               # once it knows the connection usual RTT, feedback_batch_size() may allow a bigger 
+                                               # feedback window size
+        self.max_feedback_window: int = max_feedback_window # max allowed dynamically calculated feedback batch size. default 8
+        self.max_feedback_bytes: int = max_feedback_bytes # max bytes sent before forcing a pingpong checkpoint. default 64KB
+        self.feedback_messages: int = 0 # number of message since the previous pingpong feedback checkpoint
+        self.feedback_bytes: int = 0 # number of bytes sent since the previous pingpong feedback checkpoint
+        self.feedback_started = None # time at which the pingpong feedback checkpoint started. None when no checkpoint is pending
+        self.feedback_baseline = None # The best, lowest ping pong time observed for this client session connection
+        self.feedback_checks = 0 # number of successful pingpong checkpoint
+        self.feedback_delays = 0 # number of feedback checkpoints classfied as abnormally delayed
+        self.slow_feedback_observations = 0 # number of consecutive delayed feedback observed
         self.feedback_hold_until = 0.0
-        self.feedback_checks = 0
-        self.feedback_delays = 0
-        self.slow_send_observations = 0
-        self.slow_feedback_observations = 0
 
     @property
     def is_closed(self):
@@ -123,7 +144,8 @@ class ClientSession:
         self.last_pressure = now
 
     def compact(self):
-        """Drop only unsent provisionals, never advance the final cursor."""
+        """Removes provisionals for segments that are already finalised. For every still-active segment,
+        keep only its newest queued revision. Never advance the final cursor (self.next_history)."""
         latest = {}
         before = len(self.outgoing_queue)
         for entry in self.outgoing_queue:
@@ -135,17 +157,21 @@ class ClientSession:
         self.outgoing_bytes = sum(entry.size for entry in self.outgoing_queue)
         self.coalesced_count += before - len(self.outgoing_queue)
         if not self.outgoing_queue:
+            # No provisional remains, so no waiting period needs to be tracked.
             self.provisional_wait_started = None
         elif self.provisional_wait_started is None:
+            # begin the waiting period at the oldest retained entry of the queue after compact.
+            # This allows sender_loop() to enforce max_provisional_delay
             self.provisional_wait_started = min(entry.enqueued_at for entry in self.outgoing_queue)
 
     def update_pressure(self, now):
+        """"""
         if not self.semantic_backpressure:
             return
-        oldest_age = now - self.outgoing_queue[0].enqueued_at if self.outgoing_queue else 0.0
+        oldest_age = now - self.outgoing_queue[0].enqueued_at if self.outgoing_queue else 0.0 # the age of the oldest segment in the queue
         in_flight_age = now - self.send_started if self.send_started is not None else 0.0
         buffered = self.transport_bytes()
-        final_lag = self.history.next_sequence - self.next_final
+        final_lag = self.history.next_sequence - self.next_final # how many "final" the client is behind the latest final
         feedback_slow = (self.feedback_started is not None and
                          self.feedback_baseline is not None and
                          now - self.feedback_started >= max(
@@ -175,29 +201,46 @@ class ClientSession:
         if raw is None:
             raw = json.dumps(message)
         now = time.monotonic()
+
+        # estimate the source update rate. The sender uses this when choosing a
+        # suitable transport-feedback window and provisional replacement delay.
         if self.last_update_at is not None:
             # Observe source cadence, not segment/revision counts or client IDs.
             interval = max(0.001, now - self.last_update_at)
-            self.update_interval = (interval if self.update_interval is None
-                                    else 0.8 * self.update_interval + 0.2 * interval)
+            self.update_interval = (
+                interval 
+                if self.update_interval is None
+                else 0.8 * self.update_interval + 0.2 * interval
+            )
         self.last_update_at = now
+
+        # re-evaluate whether the client is falling behind before accepting more proivisional segment
         self.update_pressure(now)
+
+        # New caption is NOT final
         if not message["final"]:
             size = len(raw.encode("utf-8"))
-            # Switch before crossing a hard limit, then replace obsolete work.
+            
+            # Switch to congestion mode before crossing a hard limit, then replace obsolete work.
             if self.semantic_backpressure and (
                     len(self.outgoing_queue) + 1 >= self.high_pending or
                     self.outgoing_bytes + size >= self.high_bytes):
                 self.enter_congestion(now)
+
             if self.congested:
-                self.compact()
+                self.compact() # remove provisionals that are obsolete as there are finalised version of them
                 # The supplied source has one active segment, so replacement
                 # makes room before appending even when the queue is full.
-                retained = deque(entry for entry in self.outgoing_queue
+                retained = deque(entry for entry in self.outgoing_queue # keep only the newest revision for this segment
                                  if entry.segment != message["segment"])
-                self.coalesced_count += len(self.outgoing_queue) - len(retained)
+                
+                self.coalesced_count += len(self.outgoing_queue) - len(retained) # useful metrics
                 self.outgoing_queue = retained
                 self.outgoing_bytes = sum(entry.size for entry in retained)
+
+            # provisional queue is bounded by message count & byte size
+            # if still out of queue bound, then fail
+            # else add the message into the queue
             if (len(self.outgoing_queue) >= self.max_pending or
                     self.outgoing_bytes + size > self.max_pending_bytes):
                 self.failure = "Latest provisional exceeds client queue capacity"
@@ -206,9 +249,12 @@ class ClientSession:
                 self.outgoing_bytes += size
                 if self.congested and self.provisional_wait_started is None:
                     self.provisional_wait_started = now
+
+        # New caption is FINAL
         elif self.congested:
             # Final is already stored; its queued provisionals are obsolete.
             self.compact()
+
         self.ready.set()
         return self.failure is None
 
