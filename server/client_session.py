@@ -78,6 +78,7 @@ class ClientSession:
         # Congestion runtime state
         self.congested = False # is congested mode?
         self.last_pressure = 0.0 # most recent monotonic time at which congestion pressure happen
+        self.feedback_hold_until = 0.0 # Earliest time at which recovery is allowed after slow transport feedback
         self.coalesced_count = 0 # some metrics :)
         self.congestion_count = 0
         self.recovery_count = 0
@@ -107,7 +108,6 @@ class ClientSession:
         self.feedback_checks = 0 # number of successful pingpong checkpoint
         self.feedback_delays = 0 # number of feedback checkpoints classfied as abnormally delayed
         self.slow_feedback_observations = 0 # number of consecutive delayed feedback observed
-        self.feedback_hold_until = 0.0
 
     @property
     def is_closed(self):
@@ -133,19 +133,24 @@ class ClientSession:
         self.sender_task = asyncio.create_task(self.sender_loop(), name=f"client-{self.client_id}-sender-task")
 
     def transport_bytes(self):
-        """Only inspect public transport APIs; fake sockets may omit them."""
+        """Returns number of bytes currently waiting in asyncio's local websocket transport write buffer.
+
+        Only inspect public transport APIs; fake sockets may omit them."""
         transport = getattr(self.websocket, "transport", None)
         return transport.get_write_buffer_size() if transport is not None else 0
 
     def enter_congestion(self, now):
+        """Set to congestion mode and update the `self.last_pressure`"""
         if not self.congested:
             self.congested = True
             self.congestion_count += 1
         self.last_pressure = now
 
     def compact(self):
-        """Removes provisionals for segments that are already finalised. For every still-active segment,
-        keep only its newest queued revision. Never advance the final cursor (self.next_history)."""
+        """Removes provisionals for segments that are already finalised. 
+        
+        For every still-active segment, keep only its newest queued revision. 
+        Never advance the final cursor `self.next_history`."""
         latest = {}
         before = len(self.outgoing_queue)
         for entry in self.outgoing_queue:
@@ -165,17 +170,41 @@ class ClientSession:
             self.provisional_wait_started = min(entry.enqueued_at for entry in self.outgoing_queue)
 
     def update_pressure(self, now):
-        """"""
+        """Decides whether the client is keeping up with the caption stream
+        
+        Gathers some congestion signals:
+        - Unsent provisional queue size
+        - Age of queued provisional updates
+        - Duration of the current WebSocket send
+        - Amount of bytes waiting in the local transport buffer
+        - Number of finals the client is behind
+        - Duration of an outstanding ping/pong checkpoint
+
+        Then decide to either enter/remain in congestion mode OR leaves congestion mode after 
+        client remained healthy for long enough
+        """
         if not self.semantic_backpressure:
             return
         oldest_age = now - self.outgoing_queue[0].enqueued_at if self.outgoing_queue else 0.0 # the age of the oldest segment in the queue
-        in_flight_age = now - self.send_started if self.send_started is not None else 0.0
+        in_flight_age = now - self.send_started if self.send_started is not None else 0.0 # the age of the currently sending segment
         buffered = self.transport_bytes()
         final_lag = self.history.next_sequence - self.next_final # how many "final" the client is behind the latest final
+
+        # slow ping pong feedback, becomes True when a ping/pong checkpoint is in progress && 
+        # the connection already has a normal feedback baseline && 
+        # the current ping/pong is taking longer than expected
         feedback_slow = (self.feedback_started is not None and
                          self.feedback_baseline is not None and
                          now - self.feedback_started >= max(
                              self.lag_seconds, self.feedback_threshold()))
+
+        # is in pressure if:
+        # feedback is slow OR
+        # outgoing_queue exceed size OR
+        # the oldest provisional age is too old OR
+        # the segment that is currently being sent (in-flight) is being "sent" for too long OR
+        # asyncio's local websocket transport write buffer exceed write_limit OR
+        # client is more than 3 final behind
         pressure = (feedback_slow or len(self.outgoing_queue) >= self.high_pending or
                     self.outgoing_bytes >= self.high_bytes or
                     oldest_age >= self.lag_seconds or
@@ -186,6 +215,8 @@ class ClientSession:
         if self.congested:
             self.compact()
             # Separate high/low thresholds and a quiet interval avoid flapping.
+
+            # recovery condition !!!
             if (not pressure and len(self.outgoing_queue) <= self.low_pending and
                     self.outgoing_bytes <= self.low_bytes and final_lag == 0 and
                     buffered <= 8192 and self.send_started is None and
@@ -195,7 +226,30 @@ class ClientSession:
                 self.recovery_count += 1
 
     def enqueue(self, message: CaptionUpdateMessage, raw: str | None = None) -> bool:
-        """Never await a socket or queue space in the source handler."""
+        """Offer a live caption update to client's sender
+
+        This method is called by `DeliveryHub.publish()` after the application has
+        accepted a source update. It performs only non-blocking, in-memory work;
+        it never waits for queue space or sends data through the WebSocket.
+        Consequently, a slow client cannot delay the source handler or other
+        connected clients.
+
+        Provisional updates are placed in this client's bounded outgoing queue.
+        When the client is congested, obsolete provisional revisions are
+        coalesced so that only the newest useful revision of an active segment is
+        retained.
+
+        Final updates are not copied into the per-client queue. They are already
+        stored in the shared `FinalHistory` and are delivered by `sender_loop()`
+        according to this client's `next_final` cursor. Receiving a final update
+        wakes the sender and may remove provisional updates made obsolete by that
+        final.
+
+        Returns:
+            True if the update was accepted for delivery or is available through
+            FinalHistory. False if the client was already closed, had previously
+            failed, or exceeded its bounded provisional queue capacity.
+        """
         if self.stopped or self.failure:
             return False
         if raw is None:
@@ -239,24 +293,31 @@ class ClientSession:
                 self.outgoing_bytes = sum(entry.size for entry in retained)
 
             # provisional queue is bounded by message count & byte size
-            # if still out of queue bound, then fail
-            # else add the message into the queue
+            # If still out of queue bound, then fail
+            # Else add the message into the queue
             if (len(self.outgoing_queue) >= self.max_pending or
                     self.outgoing_bytes + size > self.max_pending_bytes):
                 self.failure = "Latest provisional exceeds client queue capacity"
             else:
                 self.outgoing_queue.append(QueueEntry(message["segment"], raw, size, now))
                 self.outgoing_bytes += size
+
+                # Record when (time) a congested provisional first began waiting
+                # This prevents it from being held indefinitely for further replacement
                 if self.congested and self.provisional_wait_started is None:
                     self.provisional_wait_started = now
 
-        # New caption is FINAL
+        # New caption is FINAL and in congested mode, then just compact the provisional queue
         elif self.congested:
             # Final is already stored; its queued provisionals are obsolete.
             self.compact()
 
+        # Wake sender_loop(), either provisional work was queued or a new final is
+        # now available through FinalHistory
         self.ready.set()
+
         return self.failure is None
+
 
     async def send(self, raw):
         started = time.monotonic()
