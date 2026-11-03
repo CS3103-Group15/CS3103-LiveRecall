@@ -28,27 +28,21 @@ class CaptionState:
         self.session = session
         self.active: dict[int, CaptionSegment] = {} # Latest provisional caption for each active segment
         self.highest_finalized_segment = 0 # Largest finalized segment ID
-        self.accepted_count = 0
-        self.rejected_count = 0
 
     def accept_update(self, message:dict[str, Any],
                       store_final: Callable[[CaptionSegment], None] | None = None) -> CaptionSegment | None:
         caption_update = self.parse_update(message)
 
         if caption_update is None:
-            self.rejected_count += 1
             return None
 
         if caption_update.segment_id <= self.highest_finalized_segment:
-            self.rejected_count += 1
             return None
 
         previous = self.active.get(caption_update.segment_id)
 
-        if previous is not None:
-            if caption_update.revision <= previous.revision:
-                self.rejected_count += 1
-                return None
+        if previous is not None and caption_update.revision <= previous.revision:
+            return None
 
         if caption_update.final:
             # Store before committing state so capacity failures leave it retryable.
@@ -59,7 +53,6 @@ class CaptionState:
         else:
             self.active[caption_update.segment_id] = caption_update
 
-        self.accepted_count += 1
         return caption_update
 
     def parse_update(self, message:dict[str, Any]) -> CaptionSegment | None:

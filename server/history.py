@@ -1,31 +1,46 @@
-# How the server stores finalized caption segments for later retrieval by clients that have fallen behind
 from collections import deque
 import time
 import json
 
 from server.state import CaptionSegment
-from server.protocol import CaptionUpdateMessage, HistoryMessage
+from server.protocol import CaptionUpdateMessage
 
+# One finalized caption stored in the shared history
 class FinalEntry:
     def __init__(self, caption:CaptionSegment, stored_at:float, sequence:int):
+        # Internal history position used by sender bookmarks, not the caption segment ID
         self.sequence = sequence
+        # Serialize once so all client senders can reuse the same message
         self.raw = json.dumps(caption.to_dict())
+        # Serialized message size used to enforce the history byte limit
         self.size = len(self.raw.encode("utf-8"))
+        # Caption details used when preparing recovery history
         self.caption = caption
+        # Time this final entered the server history, used for expiry
         self.stored_at = stored_at
 
+# One bounded final-caption history shared by all clients
 class FinalHistory:
     def __init__(self, retention_seconds:float=70, max_items:int=20000, max_bytes:int=32 * 1024 * 1024):
+        # How long finals are retained after storage, default 70 seconds
         self.retention_seconds = retention_seconds
+        # Maximum number of retained finals
         self.max_items = max_items
 
+        # Finals in storage order, oldest first, so expired entries can be removed easily
         self.items:deque[FinalEntry] = deque()
+        # Highest segment ID already stored as final
         self.latest_segment_id = 0
+        # Internal sequence number to assign to the next stored final
         self.next_sequence = 0
+        # Looks up a final directly using a sender's bookmark
         self.by_sequence: dict[int, FinalEntry] = {}
+        # Maximum total serialized payload size retained in history
         self.max_bytes = max_bytes
+        # Current total serialized payload size
         self.total_bytes = 0
 
+    # Stores a new final while keeping history within its limits
     def add(self, caption:CaptionSegment) -> None:
         if caption.segment_id <= self.latest_segment_id:
             return
@@ -46,6 +61,7 @@ class FinalHistory:
         self.next_sequence += 1
         self.latest_segment_id = caption.segment_id
 
+    # Expires finals stored longer than the retention window
     def remove_old_entries(self, now:float|None=None) -> None:
         if now is None:
             now = time.monotonic()
@@ -57,6 +73,7 @@ class FinalHistory:
             self.by_sequence.pop(entry.sequence)
             self.total_bytes -= entry.size
 
+    # Prepares missing recent finals for reconnecting or late-joining clients
     def get_recent(self, seconds:float, last_segment:int=0, last_revision:int=0) -> list[CaptionUpdateMessage]:
         self.remove_old_entries()
         cutoff = time.time() - seconds
@@ -80,13 +97,9 @@ class FinalHistory:
         self.remove_old_entries()
         return len(self.items)
 
+    # Finds the next final a client sender needs, using its delivery bookmark
     def get_entry(self, sequence: int) -> FinalEntry | None:
-        """Read a sender bookmark; never silently skip expired finals."""
         self.remove_old_entries()
         if sequence < self.next_sequence and sequence not in self.by_sequence:
             raise LookupError("Client fell behind retained final history")
         return self.by_sequence.get(sequence)
-
-    @staticmethod
-    def get_history_message_format(history_items: list[CaptionUpdateMessage]) -> HistoryMessage:
-        return {"type": "HISTORY", "items": history_items}

@@ -1,4 +1,3 @@
-"""One client connection, bounded outgoing work and semantic sender policy."""
 from __future__ import annotations
 import asyncio
 from collections import deque
@@ -9,7 +8,7 @@ import time
 
 from server.delivery_policy import DeliveryPolicy, FeedbackState
 from server.history import FinalHistory
-from server.protocol import CaptionUpdateMessage
+from server.protocol import CaptionUpdateMessage, HistoryMessage
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -17,47 +16,58 @@ if TYPE_CHECKING:
 
 
 class ClientSession:
-    # START: Group fixed settings and ping/pong state separately from session work.
     def __init__(self, websocket, history: FinalHistory, history_items: list[dict], *,
                  policy: DeliveryPolicy | None = None, **policy_options):
         if policy is not None and policy_options:
             raise TypeError("Pass a policy or individual policy options, not both")
         self.policy = policy if policy is not None else DeliveryPolicy(**policy_options)
+        # Tracks ping/pong timing and messages/bytes sent since the last checkpoint
         self.feedback = FeedbackState()
+        # Connection used to send messages to this client
         self.websocket = websocket
+        # Reference to shared final history
         self.history = history
-        # HISTORY already includes earlier finals; the bookmark starts after them.
-        self.next_final = history.next_sequence
-        self.initial_history = json.dumps(history.get_history_message_format(history_items))
+        # This client's pending provisional captions, waiting to be sent
         self.outgoing_queue = deque()
+        # Total size in bytes of provisionals currently in the queue
         self.outgoing_bytes = 0
+        # Signal that wakes the sender when new work arrives.
         self.ready = asyncio.Event()
+        # Stores a failure reason, if this session encounters an error
         self.failure = None
+        # Holds the independent sender task once it starts
         self.sender_task = None
+        # Prepares the initial HISTORY message and sets the next-final bookmark
+        self.set_initial_history(history_items)
+        # Whether this session has been stopped
         self.stopped = False
+        # Whether congestion mode is active for this client
         self.congested = False
+         # Time when congestion pressure was last detected
         self.last_pressure = 0.0
+         # Start time of an ongoing caption send
         self.send_started = None
+        # Smoothed time between caption arrivals
         self.update_interval = None
+        # Previous caption arrival time
         self.last_update_at = None
+        # When provisional deferral began
         self.provisional_wait_started = None
+         # Counts consecutive mildly slow sends, capped at 2
         self.slow_send_observations = 0
+        # Counts consecutive mildly slow ping/pong checks, capped at 2
         self.slow_feedback_observations = 0
-    # END: Group fixed settings and ping/pong state separately from session work.
 
-    @property
-    def is_closed(self):
-        return self.stopped
-
+    # Prepares the initial history snapshot for this client session's independent sender
     def set_initial_history(self, history_items):
-        """Called with application state protected, before the sender starts."""
         if self.sender_task is not None:
             raise RuntimeError("Cannot replace history after sender start")
         self.next_final = self.history.next_sequence
-        self.initial_history = json.dumps(self.history.get_history_message_format(history_items))
+        message: HistoryMessage = {"type": "HISTORY", "items": history_items}
+        self.initial_history = json.dumps(message)
 
+    # Keeps the connection alive while the independent sender does delivery
     async def run(self):
-        """Own connection lifetime while the independent sender does delivery."""
         self.start()
         try:
             async for _ in self.websocket:
@@ -65,11 +75,11 @@ class ClientSession:
         finally:
             await self.close()
 
+    # Starts this client's independent sender
     def start(self):
         self.sender_task = asyncio.create_task(self.sender_loop(), name="client-sender-task")
 
     def transport_bytes(self):
-        """Only inspect public transport APIs; fake sockets may omit them."""
         transport = getattr(self.websocket, "transport", None)
         return transport.get_write_buffer_size() if transport is not None else 0
 
@@ -77,13 +87,12 @@ class ClientSession:
         self.congested = True
         self.last_pressure = now
 
+    # Removes provisionals for completed segments, keeps the latest unfinished revision
     def compact(self):
-        """Drop only unsent provisionals, never advance the final cursor."""
         latest = {}
         for entry in self.outgoing_queue:
             segment = entry[0]
             if segment > self.history.latest_segment_id:
-                # Accepted source revisions arrive in increasing order.
                 latest[segment] = entry
         self.outgoing_queue = deque(latest.values())
         self.outgoing_bytes = sum(entry[2] for entry in self.outgoing_queue)
@@ -92,6 +101,7 @@ class ClientSession:
         elif self.provisional_wait_started is None:
             self.provisional_wait_started = min(entry[3] for entry in self.outgoing_queue)
 
+    # What signals congestion
     def update_pressure(self, now):
         if not self.policy.semantic_backpressure:
             return
@@ -120,15 +130,15 @@ class ClientSession:
                     now >= self.feedback.hold_until):
                 self.congested = False
 
+    # For enqueuing a caption to the independent sender
     def enqueue(self, message: CaptionUpdateMessage, raw: str | None = None) -> bool:
-        """Never await a socket or queue space in the source handler."""
+        # Check if sender queue can still accept work
         if self.stopped or self.failure:
             return False
         if raw is None:
             raw = json.dumps(message)
         now = time.monotonic()
         if self.last_update_at is not None:
-            # Observe source cadence, not segment/revision counts or client IDs.
             interval = max(0.001, now - self.last_update_at)
             self.update_interval = (interval if self.update_interval is None
                                     else 0.8 * self.update_interval + 0.2 * interval)
@@ -136,15 +146,12 @@ class ClientSession:
         self.update_pressure(now)
         if not message["final"]:
             size = len(raw.encode("utf-8"))
-            # Switch before crossing a hard limit, then replace obsolete work.
             if self.policy.semantic_backpressure and (
                     len(self.outgoing_queue) + 1 >= self.policy.high_pending or
                     self.outgoing_bytes + size >= self.policy.high_bytes):
                 self.enter_congestion(now)
             if self.congested:
                 self.compact()
-                # The supplied source has one active segment, so replacement
-                # makes room before appending even when the queue is full.
                 retained = deque(e for e in self.outgoing_queue if e[0] != message["segment"])
                 self.outgoing_queue = retained
                 self.outgoing_bytes = sum(e[2] for e in retained)
@@ -152,16 +159,18 @@ class ClientSession:
                     self.outgoing_bytes + size > self.policy.max_pending_bytes):
                 self.failure = "Latest provisional exceeds client queue capacity"
             else:
+                # If not congested, enqueue the provisional
                 self.outgoing_queue.append((message["segment"], raw, size, now))
                 self.outgoing_bytes += size
                 if self.congested and self.provisional_wait_started is None:
                     self.provisional_wait_started = now
         elif self.congested:
-            # Final is already stored; its queued provisionals are obsolete.
             self.compact()
+        # Wake the sender loop
         self.ready.set()
         return self.failure is None
 
+    # Sender sends caption to client
     async def send(self, raw):
         started = time.monotonic()
         self.send_started = started
@@ -171,33 +180,29 @@ class ClientSession:
             self.send_started = None
         now = time.monotonic()
         duration = now - started
+        # Checks if send took longer than expected and if is sustained
         if self.policy.semantic_backpressure and duration >= self.policy.slow_send_seconds:
             self.slow_send_observations = min(2, self.slow_send_observations + 1)
-            # A short scheduling spike is not sustained backpressure. Severe
-            # lag acts immediately; two consecutive mild sends confirm it too.
             if (duration >= max(self.policy.lag_seconds, self.policy.slow_send_seconds) or
                     self.slow_send_observations >= 2):
                 self.enter_congestion(now)
                 self.compact()
         else:
             self.slow_send_observations = 0
+        # Handles the ping/pong feedback mechanism
         await self.delivery_checkpoint(len(raw.encode("utf-8")))
 
     def feedback_threshold(self):
-        # Compare against this connection's best RTT: ordinary propagation
-        # delay alone shouldn't permanently classify a link as overloaded.
         return max(self.policy.slow_send_seconds, 4 * (self.feedback.baseline or 0.0))
 
     def feedback_batch_size(self):
-        """Bounded pipeline sized to baseline RTT and accepted update cadence."""
         if self.feedback.baseline is None:
             return self.policy.feedback_window
         interval = self.update_interval or self.policy.lag_seconds
-        # Fast links retain one-message feedback. A propagation RTT longer than
-        # the source spacing needs a small pipeline to avoid stop-and-wait lag.
         needed = math.ceil(2 * self.feedback.baseline / max(0.001, interval))
         return max(self.policy.feedback_window, min(self.policy.max_feedback_window, needed))
 
+    # Checks if the client is able to receive more work using ping/pong feedback
     async def delivery_checkpoint(self, size=0):
         if not self.policy.semantic_backpressure or not callable(getattr(self.websocket, "ping", None)):
             return
@@ -210,25 +215,28 @@ class ClientSession:
         self.feedback.bytes = 0
         started = time.monotonic()
         self.feedback.started = started
+        # Ping the client and wait for pong
         try:
             pong = await asyncio.wait_for(self.websocket.ping(), timeout=self.policy.send_timeout)
             await asyncio.wait_for(asyncio.shield(pong), timeout=self.policy.send_timeout)
         finally:
             self.feedback.started = None
         elapsed = time.monotonic() - started
+        # Establish a baseline for ping/pong RTT
         previous_baseline = self.feedback.baseline
         if previous_baseline is None:
             self.feedback.baseline = elapsed
         else:
             threshold = self.feedback_threshold()
             self.feedback.baseline = min(previous_baseline, elapsed)
+            # If RTT slow check if is sustained
             if elapsed >= threshold:
                 self.slow_feedback_observations = min(2, self.slow_feedback_observations + 1)
+                # Compact if congested by removing old provisionals
                 if (elapsed >= max(self.policy.lag_seconds, threshold) or
                         self.slow_feedback_observations >= 2):
                     now = time.monotonic()
                     self.enter_congestion(now)
-                    # One fast pong doesn't establish sustained receive capacity.
                     self.feedback.hold_until = max(
                         self.feedback.hold_until,
                         now + min(60.0, max(self.policy.recovery_seconds, 16 * elapsed)))
@@ -236,24 +244,23 @@ class ClientSession:
             else:
                 self.slow_feedback_observations = 0
 
+    # Independent sender loop, delivering queued work to the client
     async def sender_loop(self):
         try:
+            # Sends the initial history snapshot before any queued work
             await self.send(self.initial_history)
             self.initial_history = None
+            # Checks for new work
             while not self.stopped:
                 if self.failure:
                     break
+                # Update congestion state and compact the queue if needed
                 self.update_pressure(time.monotonic())
                 final = self.history.get_entry(self.next_final)
-                # Preserve source order: same-segment provisionals before its
-                # final; never send a later segment ahead of an earlier final.
+                # Checks if is send a provisional
                 if self.outgoing_queue and (final is None or
                         self.outgoing_queue[0][0] <= final.caption.segment_id):
                     if self.congested:
-                        # Keep a brief replacement window for the latest
-                        # provisional too. Otherwise fast transport feedback
-                        # can release every new revision into a slow reader's
-                        # buffers even while congestion mode is active.
                         now = time.monotonic()
                         quiet_window = max(self.policy.lag_seconds, min(
                             1.0, 2 * (self.update_interval or 0.0)))
@@ -275,11 +282,12 @@ class ClientSession:
                     if not self.outgoing_queue:
                         self.provisional_wait_started = None
                     await self.send(raw)
+                # Checks if is send a final
                 elif final is not None:
                     await self.send(final.raw)
                     self.next_final += 1
                 else:
-                    # No await between inspecting work and clearing the event.
+                    # Sleep till new work arrives or connection closes
                     self.ready.clear()
                     await self.ready.wait()
         except asyncio.CancelledError:
@@ -332,15 +340,17 @@ def parse_client_hello(hello:dict[str, Any]) -> tuple[int, int, int]:
     return last_segment, last_revision, history_seconds
 
 
-
+# Server's handler for a client connection
 async def handle_client(websocket, hello: dict[str, Any],
                         application: LiveRecallApplication) -> None:
     if hello.get("session") != "L1":
         await websocket.close(code=1008, reason="Invalid session")
         return
     client_id = hello.get("client_id")
+    # Creates an independent sender for each client
     client = ClientSession(websocket, application.final_history, [],
                            semantic_backpressure=application.semantic_backpressure)
+    # Registers the client with the server and prepares the initial history snapshot for its independent sender
     try:
         await application.attach_client(client, *parse_client_hello(hello))
         print(f"client connected: id={client_id}; "
