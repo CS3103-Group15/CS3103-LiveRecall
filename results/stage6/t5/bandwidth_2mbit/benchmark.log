@@ -1,0 +1,812 @@
+LiveRecall listening on ws://0.0.0.0:8765
+opening handshake failed
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 138, in parse
+    request_line = yield from parse_line(read_line)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/server.py", line 547, in parse
+    request = yield from Request.parse(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.reader.read_line,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 140, in parse
+    raise EOFError("connection closed while reading HTTP request line") from exc
+EOFError: connection closed while reading HTTP request line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/asyncio/server.py", line 356, in conn_handler
+    await connection.handshake(
+    ...<3 lines>...
+    )
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/asyncio/server.py", line 207, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP request
+Starting 100 clients; slow=0, disconnecting=0, late=0
+client connected: id=0; clients=1
+client connected: id=1; clients=2
+client connected: id=2; clients=3
+client connected: id=3; clients=4
+client connected: id=4; clients=5
+client connected: id=5; clients=6
+client connected: id=6; clients=7
+client connected: id=7; clients=8
+client connected: id=8; clients=9
+client connected: id=9; clients=10
+client connected: id=10; clients=11
+client connected: id=11; clients=12
+client connected: id=12; clients=13
+client connected: id=13; clients=14
+client connected: id=14; clients=15
+client connected: id=15; clients=16
+client connected: id=16; clients=17
+client connected: id=17; clients=18
+client connected: id=18; clients=19
+client connected: id=19; clients=20
+client connected: id=20; clients=21
+client connected: id=21; clients=22
+client connected: id=22; clients=23
+client connected: id=23; clients=24
+client connected: id=24; clients=25
+client connected: id=25; clients=26
+client connected: id=26; clients=27
+client connected: id=27; clients=28
+client connected: id=28; clients=29
+client connected: id=29; clients=30
+client connected: id=30; clients=31
+client connected: id=31; clients=32
+client connected: id=32; clients=33
+client connected: id=33; clients=34
+client connected: id=34; clients=35
+client connected: id=35; clients=36
+client connected: id=36; clients=37
+client connected: id=37; clients=38
+client connected: id=38; clients=39
+client connected: id=39; clients=40
+client connected: id=40; clients=41
+client connected: id=41; clients=42
+client connected: id=42; clients=43
+client connected: id=43; clients=44
+client connected: id=44; clients=45
+client connected: id=45; clients=46
+client connected: id=46; clients=47
+client connected: id=47; clients=48
+client connected: id=48; clients=49
+client connected: id=49; clients=50
+client connected: id=50; clients=51
+client connected: id=51; clients=52
+client connected: id=52; clients=53
+client connected: id=53; clients=54
+client connected: id=54; clients=55
+client connected: id=55; clients=56
+client connected: id=56; clients=57
+client connected: id=57; clients=58
+client connected: id=58; clients=59
+client connected: id=59; clients=60
+client connected: id=60; clients=61
+client connected: id=61; clients=62
+client connected: id=62; clients=63
+client connected: id=63; clients=64
+client connected: id=64; clients=65
+client connected: id=65; clients=66
+client connected: id=66; clients=67
+client connected: id=67; clients=68
+client connected: id=68; clients=69
+client connected: id=69; clients=70
+client connected: id=70; clients=71
+client connected: id=71; clients=72
+client connected: id=72; clients=73
+client connected: id=73; clients=74
+client connected: id=74; clients=75
+client connected: id=75; clients=76
+client connected: id=76; clients=77
+client connected: id=77; clients=78
+client connected: id=78; clients=79
+client connected: id=79; clients=80
+client connected: id=80; clients=81
+client connected: id=81; clients=82
+client connected: id=82; clients=83
+client connected: id=83; clients=84
+client connected: id=84; clients=85
+client connected: id=85; clients=86
+client connected: id=86; clients=87
+client connected: id=87; clients=88
+client connected: id=88; clients=89
+client connected: id=89; clients=90
+client connected: id=90; clients=91
+client connected: id=91; clients=92
+client connected: id=92; clients=93
+client connected: id=93; clients=94
+client connected: id=94; clients=95
+client connected: id=95; clients=96
+client connected: id=96; clients=97
+client connected: id=97; clients=98
+client connected: id=98; clients=99
+client connected: id=99; clients=100
+source connected: session=L1
+source finished: accepted=147; rejected=0SOURCE_DONE: emitted 49 finalized segments
+
+source disconnected
+client disconnected: id=35; clients=99; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=37; clients=98; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=72; clients=97; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=24; clients=96; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=9; clients=95; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=33; clients=94; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=23; clients=93; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=20; clients=92; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=99; clients=91; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=59; clients=90; congestion_entries=1; recoveries=1; coalesced=8; feedback_checks=140; feedback_delays=1; failure=None
+client disconnected: id=34; clients=89; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=7; clients=88; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=38; clients=87; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=8; clients=86; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=74; clients=85; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=27; clients=84; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=14; clients=83; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=10; clients=82; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=13; clients=81; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=75; clients=80; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=11; clients=79; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=46; clients=78; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=4; clients=77; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=98; clients=76; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=73; clients=75; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=93; clients=74; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=77; clients=73; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=61; clients=72; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=47; clients=71; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=62; clients=70; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=86; clients=69; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=41; clients=68; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=45; clients=67; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+Results written to /media/sf_CS3103-LiveRecall/results/stage6/t5/bandwidth_2mbit/bandwidth_2mbit_run01.csv
+client disconnected: id=2; clients=66; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=1; clients=65; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=51; clients=64; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=36; clients=63; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=15; clients=62; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=85; clients=61; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=32; clients=60; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=30; clients=59; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=66; clients=58; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=19; clients=57; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=82; clients=56; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=88; clients=55; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=28; clients=54; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=58; clients=53; congestion_entries=1; recoveries=1; coalesced=8; feedback_checks=140; feedback_delays=1; failure=None
+client disconnected: id=68; clients=52; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=83; clients=51; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=29; clients=50; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=12; clients=49; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=97; clients=48; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=5; clients=47; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=60; clients=46; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=84; clients=45; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=71; clients=44; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=96; clients=43; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=3; clients=42; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=6; clients=41; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=48; clients=40; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=21; clients=39; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=67; clients=38; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=78; clients=37; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=80; clients=36; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=70; clients=35; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=56; clients=34; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=92; clients=33; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=31; clients=32; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=42; clients=31; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=0; clients=30; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=49; clients=29; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=65; clients=28; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=94; clients=27; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=22; clients=26; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=50; clients=25; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=79; clients=24; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=89; clients=23; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=18; clients=22; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=90; clients=21; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=57; clients=20; congestion_entries=2; recoveries=2; coalesced=10; feedback_checks=138; feedback_delays=2; failure=None
+client disconnected: id=76; clients=19; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=40; clients=18; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=63; clients=17; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=53; clients=16; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=95; clients=15; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=54; clients=14; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=64; clients=13; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=81; clients=12; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=17; clients=11; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=16; clients=10; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=87; clients=9; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=55; clients=8; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=43; clients=7; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=69; clients=6; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=25; clients=5; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=39; clients=4; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=91; clients=3; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=52; clients=2; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=26; clients=1; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=44; clients=0; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+LiveRecall listening on ws://0.0.0.0:8765
+opening handshake failed
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 138, in parse
+    request_line = yield from parse_line(read_line)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/server.py", line 547, in parse
+    request = yield from Request.parse(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.reader.read_line,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 140, in parse
+    raise EOFError("connection closed while reading HTTP request line") from exc
+EOFError: connection closed while reading HTTP request line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/asyncio/server.py", line 356, in conn_handler
+    await connection.handshake(
+    ...<3 lines>...
+    )
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/asyncio/server.py", line 207, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP request
+Starting 100 clients; slow=0, disconnecting=0, late=0
+client connected: id=0; clients=1
+client connected: id=1; clients=2
+client connected: id=2; clients=3
+client connected: id=3; clients=4
+client connected: id=4; clients=5
+client connected: id=5; clients=6
+client connected: id=6; clients=7
+client connected: id=7; clients=8
+client connected: id=8; clients=9
+client connected: id=9; clients=10
+client connected: id=10; clients=11
+client connected: id=11; clients=12
+client connected: id=12; clients=13
+client connected: id=13; clients=14
+client connected: id=14; clients=15
+client connected: id=15; clients=16
+client connected: id=16; clients=17
+client connected: id=17; clients=18
+client connected: id=18; clients=19
+client connected: id=19; clients=20
+client connected: id=20; clients=21
+client connected: id=21; clients=22
+client connected: id=22; clients=23
+client connected: id=23; clients=24
+client connected: id=24; clients=25
+client connected: id=25; clients=26
+client connected: id=26; clients=27
+client connected: id=27; clients=28
+client connected: id=28; clients=29
+client connected: id=29; clients=30
+client connected: id=30; clients=31
+client connected: id=31; clients=32
+client connected: id=32; clients=33
+client connected: id=33; clients=34
+client connected: id=34; clients=35
+client connected: id=35; clients=36
+client connected: id=36; clients=37
+client connected: id=37; clients=38
+client connected: id=38; clients=39
+client connected: id=39; clients=40
+client connected: id=40; clients=41
+client connected: id=41; clients=42
+client connected: id=42; clients=43
+client connected: id=43; clients=44
+client connected: id=44; clients=45
+client connected: id=45; clients=46
+client connected: id=46; clients=47
+client connected: id=47; clients=48
+client connected: id=48; clients=49
+client connected: id=49; clients=50
+client connected: id=50; clients=51
+client connected: id=51; clients=52
+client connected: id=52; clients=53
+client connected: id=53; clients=54
+client connected: id=54; clients=55
+client connected: id=55; clients=56
+client connected: id=56; clients=57
+client connected: id=57; clients=58
+client connected: id=58; clients=59
+client connected: id=59; clients=60
+client connected: id=60; clients=61
+client connected: id=61; clients=62
+client connected: id=62; clients=63
+client connected: id=63; clients=64
+client connected: id=64; clients=65
+client connected: id=65; clients=66
+client connected: id=66; clients=67
+client connected: id=67; clients=68
+client connected: id=68; clients=69
+client connected: id=69; clients=70
+client connected: id=70; clients=71
+client connected: id=71; clients=72
+client connected: id=72; clients=73
+client connected: id=73; clients=74
+client connected: id=74; clients=75
+client connected: id=75; clients=76
+client connected: id=76; clients=77
+client connected: id=77; clients=78
+client connected: id=78; clients=79
+client connected: id=79; clients=80
+client connected: id=80; clients=81
+client connected: id=81; clients=82
+client connected: id=82; clients=83
+client connected: id=83; clients=84
+client connected: id=84; clients=85
+client connected: id=85; clients=86
+client connected: id=86; clients=87
+client connected: id=87; clients=88
+client connected: id=88; clients=89
+client connected: id=89; clients=90
+client connected: id=90; clients=91
+client connected: id=91; clients=92
+client connected: id=92; clients=93
+client connected: id=93; clients=94
+client connected: id=94; clients=95
+client connected: id=95; clients=96
+client connected: id=96; clients=97
+client connected: id=97; clients=98
+client connected: id=98; clients=99
+client connected: id=99; clients=100
+source connected: session=L1
+source finished: accepted=147; rejected=0
+SOURCE_DONE: emitted 49 finalized segments
+source disconnected
+client disconnected: id=71; clients=99; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=9; clients=98; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=47; clients=97; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=34; clients=96; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=8; clients=95; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=7; clients=94; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=18; clients=93; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=98; clients=92; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=85; clients=91; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=21; clients=90; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=45; clients=89; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=72; clients=88; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=59; clients=87; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=87; clients=86; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=84; clients=85; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=30; clients=84; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=81; clients=83; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=60; clients=82; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=23; clients=81; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=96; clients=80; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=36; clients=79; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=3; clients=78; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=19; clients=77; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=82; clients=76; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=46; clients=75; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=63; clients=74; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=33; clients=73; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+Results written to /media/sf_CS3103-LiveRecall/results/stage6/t5/bandwidth_2mbit/bandwidth_2mbit_run02.csv
+client disconnected: id=74; clients=72; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=39; clients=71; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=97; clients=70; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=5; clients=69; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=99; clients=68; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=11; clients=67; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=93; clients=66; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=55; clients=65; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=83; clients=64; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=65; clients=63; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=70; clients=62; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=77; clients=61; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=50; clients=60; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=89; clients=59; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=1; clients=58; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=25; clients=57; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=88; clients=56; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=41; clients=55; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=48; clients=54; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=27; clients=53; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=92; clients=52; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=61; clients=51; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=94; clients=50; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=57; clients=49; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=2; clients=48; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=62; clients=47; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=95; clients=46; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=42; clients=45; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=78; clients=44; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=86; clients=43; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=91; clients=42; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=40; clients=41; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=38; clients=40; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=58; clients=39; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=80; clients=38; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=66; clients=37; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=14; clients=36; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=68; clients=35; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=32; clients=34; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=26; clients=33; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=79; clients=32; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=6; clients=31; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=69; clients=30; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=73; clients=29; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=56; clients=28; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=54; clients=27; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=12; clients=26; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=15; clients=25; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=67; clients=24; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=75; clients=23; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=64; clients=22; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=10; clients=21; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=4; clients=20; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=24; clients=19; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=44; clients=18; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=31; clients=17; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=37; clients=16; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=35; clients=15; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=76; clients=14; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=29; clients=13; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=28; clients=12; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=90; clients=11; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=43; clients=10; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=17; clients=9; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=22; clients=8; congestion_entries=1; recoveries=1; coalesced=6; feedback_checks=142; feedback_delays=1; failure=None
+client disconnected: id=52; clients=7; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=49; clients=6; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=16; clients=5; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=53; clients=4; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=13; clients=3; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=0; clients=2; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=51; clients=1; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=20; clients=0; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+LiveRecall listening on ws://0.0.0.0:8765
+opening handshake failed
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 138, in parse
+    request_line = yield from parse_line(read_line)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 320, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/server.py", line 547, in parse
+    request = yield from Request.parse(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.reader.read_line,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/http11.py", line 140, in parse
+    raise EOFError("connection closed while reading HTTP request line") from exc
+EOFError: connection closed while reading HTTP request line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/asyncio/server.py", line 356, in conn_handler
+    await connection.handshake(
+    ...<3 lines>...
+    )
+  File "/home/yo/.venvs/liverecall/lib/python3.13/site-packages/websockets/asyncio/server.py", line 207, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP request
+Starting 100 clients; slow=0, disconnecting=0, late=0
+client connected: id=0; clients=1
+client connected: id=1; clients=2
+client connected: id=2; clients=3
+client connected: id=3; clients=4
+client connected: id=4; clients=5
+client connected: id=5; clients=6
+client connected: id=6; clients=7
+client connected: id=7; clients=8
+client connected: id=8; clients=9
+client connected: id=9; clients=10
+client connected: id=10; clients=11
+client connected: id=11; clients=12
+client connected: id=12; clients=13
+client connected: id=13; clients=14
+client connected: id=14; clients=15
+client connected: id=15; clients=16
+client connected: id=16; clients=17
+client connected: id=17; clients=18
+client connected: id=18; clients=19
+client connected: id=19; clients=20
+client connected: id=20; clients=21
+client connected: id=21; clients=22
+client connected: id=22; clients=23
+client connected: id=23; clients=24
+client connected: id=24; clients=25
+client connected: id=25; clients=26
+client connected: id=26; clients=27
+client connected: id=27; clients=28
+client connected: id=28; clients=29
+client connected: id=29; clients=30
+client connected: id=30; clients=31
+client connected: id=31; clients=32
+client connected: id=32; clients=33
+client connected: id=33; clients=34
+client connected: id=34; clients=35
+client connected: id=35; clients=36
+client connected: id=36; clients=37
+client connected: id=37; clients=38
+client connected: id=38; clients=39
+client connected: id=39; clients=40
+client connected: id=40; clients=41
+client connected: id=41; clients=42
+client connected: id=42; clients=43
+client connected: id=43; clients=44
+client connected: id=44; clients=45
+client connected: id=45; clients=46
+client connected: id=46; clients=47
+client connected: id=47; clients=48
+client connected: id=48; clients=49
+client connected: id=49; clients=50
+client connected: id=50; clients=51
+client connected: id=51; clients=52
+client connected: id=52; clients=53
+client connected: id=53; clients=54
+client connected: id=54; clients=55
+client connected: id=55; clients=56
+client connected: id=56; clients=57
+client connected: id=57; clients=58
+client connected: id=58; clients=59
+client connected: id=59; clients=60
+client connected: id=60; clients=61
+client connected: id=61; clients=62
+client connected: id=62; clients=63
+client connected: id=63; clients=64
+client connected: id=64; clients=65
+client connected: id=65; clients=66
+client connected: id=66; clients=67
+client connected: id=67; clients=68
+client connected: id=68; clients=69
+client connected: id=69; clients=70
+client connected: id=70; clients=71
+client connected: id=71; clients=72
+client connected: id=72; clients=73
+client connected: id=73; clients=74
+client connected: id=74; clients=75
+client connected: id=75; clients=76
+client connected: id=76; clients=77
+client connected: id=77; clients=78
+client connected: id=78; clients=79
+client connected: id=79; clients=80
+client connected: id=80; clients=81
+client connected: id=81; clients=82
+client connected: id=82; clients=83
+client connected: id=83; clients=84
+client connected: id=84; clients=85
+client connected: id=85; clients=86
+client connected: id=86; clients=87
+client connected: id=87; clients=88
+client connected: id=88; clients=89
+client connected: id=89; clients=90
+client connected: id=90; clients=91
+client connected: id=91; clients=92
+client connected: id=92; clients=93
+client connected: id=93; clients=94
+client connected: id=94; clients=95
+client connected: id=95; clients=96
+client connected: id=96; clients=97
+client connected: id=97; clients=98
+client connected: id=98; clients=99
+client connected: id=99; clients=100
+source connected: session=L1
+source finished: accepted=147; rejected=0SOURCE_DONE: emitted 49 finalized segments
+source disconnected
+
+client disconnected: id=21; clients=99; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=10; clients=98; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=22; clients=97; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=23; clients=96; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=71; clients=95; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=27; clients=94; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=24; clients=93; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=98; clients=92; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=17; clients=91; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=33; clients=90; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=99; clients=89; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=7; clients=88; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=73; clients=87; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=9; clients=86; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=12; clients=85; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=20; clients=84; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=72; clients=83; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=58; clients=82; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=87; clients=81; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=89; clients=80; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=47; clients=79; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=84; clients=78; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=93; clients=77; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=85; clients=76; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=97; clients=75; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=36; clients=74; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=34; clients=73; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=46; clients=72; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+Results written to /media/sf_CS3103-LiveRecall/results/stage6/t5/bandwidth_2mbit/bandwidth_2mbit_run03.csv
+client disconnected: id=41; clients=71; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=42; clients=70; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=60; clients=69; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=75; clients=68; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=82; clients=67; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=35; clients=66; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=59; clients=65; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=66; clients=64; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=16; clients=63; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=94; clients=62; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=51; clients=61; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=96; clients=60; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=25; clients=59; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=43; clients=58; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=48; clients=57; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=31; clients=56; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=39; clients=55; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=77; clients=54; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=61; clients=53; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=86; clients=52; congestion_entries=2; recoveries=2; coalesced=8; feedback_checks=140; feedback_delays=2; failure=None
+client disconnected: id=55; clients=51; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=50; clients=50; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=83; clients=49; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=19; clients=48; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=80; clients=47; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=57; clients=46; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=8; clients=45; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=70; clients=44; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=56; clients=43; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=64; clients=42; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=38; clients=41; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=53; clients=40; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=40; clients=39; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=62; clients=38; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=6; clients=37; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=81; clients=36; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=79; clients=35; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=28; clients=34; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=91; clients=33; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=44; clients=32; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=26; clients=31; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=52; clients=30; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=11; clients=29; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=88; clients=28; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=78; clients=27; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=3; clients=26; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=32; clients=25; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=74; clients=24; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=2; clients=23; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=90; clients=22; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=95; clients=21; congestion_entries=1; recoveries=1; coalesced=4; feedback_checks=144; feedback_delays=1; failure=None
+client disconnected: id=69; clients=20; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=30; clients=19; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=4; clients=18; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=5; clients=17; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=76; clients=16; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=14; clients=15; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=13; clients=14; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=54; clients=13; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=29; clients=12; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=37; clients=11; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=15; clients=10; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=63; clients=9; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=92; clients=8; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=0; clients=7; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=67; clients=6; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=49; clients=5; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=1; clients=4; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=68; clients=3; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=18; clients=2; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=65; clients=1; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+client disconnected: id=45; clients=0; congestion_entries=0; recoveries=0; coalesced=0; feedback_checks=148; feedback_delays=0; failure=None
+
+=== Run 1/3 ===
+Clients=100, duration=40.0s, source segments=49
+LiveRecall Results
+==================
+Clients observed:              100
+Live caption messages:         14576
+Recovered history items:       0
+Accepted messages:             14576
+Recovered messages:            0
+Duplicate messages observed:   0
+Stale messages observed:       0
+P50 caption age:               15.00 ms
+P95 caption age:               46.43 ms
+P99 caption age:               52.92 ms
+Fresh Caption Ratio (<=500 ms): 100.00%
+Fresh Final Caption Ratio (<=500 ms): 100.00%
+Successful connections:        100
+Connection errors:             0
+Unique final captions:         4900/4900
+Final-caption completeness:    100.00%
+Unique live revisions:         14576/14700
+Normal Update Coverage:        99.16%
+
+=== Run 2/3 ===
+Clients=100, duration=40.0s, source segments=49
+LiveRecall Results
+==================
+Clients observed:              100
+Live caption messages:         14556
+Recovered history items:       0
+Accepted messages:             14556
+Recovered messages:            0
+Duplicate messages observed:   0
+Stale messages observed:       0
+P50 caption age:               16.10 ms
+P95 caption age:               48.33 ms
+P99 caption age:               54.68 ms
+Fresh Caption Ratio (<=500 ms): 100.00%
+Fresh Final Caption Ratio (<=500 ms): 100.00%
+Successful connections:        100
+Connection errors:             0
+Unique final captions:         4900/4900
+Final-caption completeness:    100.00%
+Unique live revisions:         14556/14700
+Normal Update Coverage:        99.02%
+
+=== Run 3/3 ===
+Clients=100, duration=40.0s, source segments=49
+LiveRecall Results
+==================
+Clients observed:              100
+Live caption messages:         14536
+Recovered history items:       0
+Accepted messages:             14536
+Recovered messages:            0
+Duplicate messages observed:   0
+Stale messages observed:       0
+P50 caption age:               15.29 ms
+P95 caption age:               47.46 ms
+P99 caption age:               53.27 ms
+Fresh Caption Ratio (<=500 ms): 100.00%
+Fresh Final Caption Ratio (<=500 ms): 100.00%
+Successful connections:        100
+Connection errors:             0
+Unique final captions:         4900/4900
+Final-caption completeness:    100.00%
+Unique live revisions:         14536/14700
+Normal Update Coverage:        98.88%
+
+=== Median across independent runs ===
+P50 caption age                    15.29 ms
+P95 caption age                    47.46 ms
+P99 caption age                    53.27 ms
+Fresh Caption Ratio               100.00 %
+Fresh Final Caption Ratio         100.00 %
+Final completeness                100.00 %
+Normal Update Coverage             99.02 %
+Normal-client P95                  47.46 ms
+
+Public run complete. CSV and JSON result files were written beside run_demo.py.
+Consolidated JSON: results/stage6/t5/bandwidth_2mbit/summary.json
+Readable summary:  results/stage6/t5/bandwidth_2mbit/summary.md

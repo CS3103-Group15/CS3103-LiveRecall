@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-11-03T16:21:10.420072+00:00",
+  "run_count": 3,
+  "run_files": [
+    "t3_run01.json",
+    "t3_run02.json",
+    "t3_run03.json"
+  ],
+  "metrics": {
+    "clients": {
+      "label": "Clients observed",
+      "unit": "count",
+      "values": [
+        100,
+        100,
+        100
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 0
+    },
+    "p50_ms": {
+      "label": "P50 caption age",
+      "unit": "ms",
+      "values": [
+        6.251,
+        6.2,
+        6.328
+      ],
+      "observed_runs": 3,
+      "median": 6.251,
+      "decimals": 2
+    },
+    "p95_ms": {
+      "label": "P95 caption age",
+      "unit": "ms",
+      "values": [
+        2258.7392999999997,
+        2253.13235,
+        2255.62015
+      ],
+      "observed_runs": 3,
+      "median": 2255.62015,
+      "decimals": 2
+    },
+    "p99_ms": {
+      "label": "P99 caption age",
+      "unit": "ms",
+      "values": [
+        24013.617299999998,
+        24021.82527,
+        24007.06928
+      ],
+      "observed_runs": 3,
+      "median": 24013.617299999998,
+      "decimals": 2
+    },
+    "fresh_pct": {
+      "label": "Fresh Caption Ratio",
+      "unit": "%",
+      "values": [
+        94.65437788018433,
+        94.65437788018433,
+        94.65437788018433
+      ],
+      "observed_runs": 3,
+      "median": 94.65437788018433,
+      "decimals": 2
+    },
+    "fresh_final_pct": {
+      "label": "Fresh Final Caption Ratio",
+      "unit": "%",
+      "values": [
+        90.0,
+        90.0,
+        90.0
+      ],
+      "observed_runs": 3,
+      "median": 90.0,
+      "decimals": 2
+    },
+    "final_completeness_pct": {
+      "label": "Final-caption completeness",
+      "unit": "%",
+      "values": [
+        95.13157894736842,
+        95.13157894736842,
+        95.13157894736842
+      ],
+      "observed_runs": 3,
+      "median": 95.13157894736842,
+      "decimals": 2
+    },
+    "normal_update_coverage_pct": {
+      "label": "Normal Update Coverage",
+      "unit": "%",
+      "values": [
+        95.17543859649123,
+        95.17543859649123,
+        95.17543859649123
+      ],
+      "observed_runs": 3,
+      "median": 95.17543859649123,
+      "decimals": 2
+    },
+    "duplicates": {
+      "label": "Duplicate messages",
+      "unit": "count",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "observed_runs": 3,
+      "median": 0.0,
+      "decimals": 0
+    },
+    "stale": {
+      "label": "Stale messages",
+      "unit": "count",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "observed_runs": 3,
+      "median": 0.0,
+      "decimals": 0
+    },
+    "connection_errors": {
+      "label": "Connection errors",
+      "unit": "count",
+      "values": [
+        0,
+        0,
+        0
+      ],
+      "observed_runs": 3,
+      "median": 0.0,
+      "decimals": 0
+    },
+    "normal_clients.p95_ms": {
+      "label": "Normal-client P95",
+      "unit": "ms",
+      "values": [
+        8.182,
+        7.985049999999999,
+        8.576
+      ],
+      "observed_runs": 3,
+      "median": 8.182,
+      "decimals": 2
+    },
+    "normal_clients.fresh_pct": {
+      "label": "Normal-client freshness",
+      "unit": "%",
+      "values": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "observed_runs": 3,
+      "median": 100.0,
+      "decimals": 2
+    },
+    "slow_clients.p95_ms": {
+      "label": "Slow-client P95",
+      "unit": "ms",
+      "values": [
+        28061.297250000003,
+        28074.796000000002,
+        28058.03555
+      ],
+      "observed_runs": 3,
+      "median": 28061.297250000003,
+      "decimals": 2
+    },
+    "slow_clients.fresh_pct": {
+      "label": "Slow-client freshness",
+      "unit": "%",
+      "values": [
+        1.694915254237288,
+        1.694915254237288,
+        1.694915254237288
+      ],
+      "observed_runs": 3,
+      "median": 1.694915254237288,
+      "decimals": 2
+    },
+    "recovery_p50_ms": {
+      "label": "Recovery P50",
+      "unit": "ms",
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "observed_runs": 0,
+      "median": null,
+      "decimals": 2
+    },
+    "recovery_p95_ms": {
+      "label": "Recovery P95",
+      "unit": "ms",
+      "values": [
+        null,
+        null,
+        null
+      ],
+      "observed_runs": 0,
+      "median": null,
+      "decimals": 2
+    }
+  }
+}
