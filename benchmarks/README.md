@@ -22,6 +22,21 @@ To run T1-T5, including every supplied network profile:
 bash benchmarks/run_all.sh
 ```
 
+## Workloads
+
+The runners use these fixed public workloads:
+
+| Test | Workload |
+| --- | --- |
+| T1 | 20 clients for 20 seconds |
+| T2 | 100 clients for 40 seconds |
+| T3 | 100 clients for 60 seconds; 10% are slow readers with a 500 ms read delay |
+| T4 | 100 clients for 60 seconds; 20% disconnect at 15 seconds and reconnect after 5 seconds |
+| T5 | 100 clients for 40 seconds under each selected network profile |
+
+Every runner defaults to three independent runs. The server is restarted for
+each run by `run_demo.py`.
+
 For a development check, run T1-T4 and each T5 profile once:
 
 ```bash
@@ -57,19 +72,31 @@ RESULT_STAGE=isolation_v1 bash benchmarks/run_t3.sh
 RESULT_STAGE=isolation_v1 bash benchmarks/run_t5.sh
 ```
 
-Stage names may contain letters, numbers, dots, underscores, and hyphens.
 
-The full runner requests sudo when it reaches T5 because `tc/netem` changes the
-loopback interface. It stops on the first failed test and T5 still resets the
-active network profile through its exit trap.
 
-T5 uses `tc/netem`, requests sudo through the network-profile scripts, and runs
-all supplied profiles by default. It resets the interface between profiles and
-again on exit if a benchmark fails:
+The full runner requests sudo when it reaches T5 because Linux traffic control
+changes the loopback interface. It stops on the first failed test and T5 still
+resets the active network profile through its exit trap.
+
+T5 requests sudo through the network-profile scripts and runs all supplied
+profiles by default. It resets the interface between profiles
+and again on exit if a benchmark fails:
 
 ```bash
 bash benchmarks/run_t5.sh
 ```
+
+The supplied profiles are:
+
+| Profile | Traffic-control settings |
+| --- | --- |
+| `delay_100ms` | 100 ms delay with 20 ms normally distributed jitter |
+| `loss_3pct` | 3% IP packet loss |
+| `delay_loss` | 120 ms delay, 30 ms normally distributed jitter, and 3% IP packet loss |
+| `bandwidth_2mbit` | Shared 2 Mbit/s rate limit, 32 Kbit burst, and 400 ms latency |
+| `reorder` | 20 ms delay and 20% IP packet reordering with 50% correlation |
+
+
 
 Run only one supplied profile, or select another interface, with environment
 variables:
@@ -99,12 +126,20 @@ results/
   t3/
   t4/
   t5/
+    delay_100ms/
+      ...
+    loss_3pct/
+      ...
     delay_loss/
       benchmark.log
       summary.md
       summary.json
       delay_loss_run01.csv
       delay_loss_run01.json
+      ...
+    bandwidth_2mbit/
+      ...
+    reorder/
       ...
 ```
 
@@ -115,3 +150,14 @@ data in a machine-readable form. To regenerate either file from existing runs:
 ```bash
 python3 consolidate_results.py results/t3 --stem t3
 ```
+
+The default expects three files named `t3_run01.json`, `t3_run02.json`, and
+`t3_run03.json`. For a single-run result, whose input is named `t3.json`, pass
+the expected run count explicitly:
+
+```bash
+python3 consolidate_results.py results/quick_check/t3 --stem t3 --expected-runs 1
+```
+
+See the main [README](../README.md#understanding-the-results) for metric
+definitions and [selected group benchmark results](../README.md#selected-group-benchmark-results).
