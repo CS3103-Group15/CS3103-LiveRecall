@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 from collections import deque
 from contextlib import suppress
+from dataclasses import dataclass
 import json
 import math
 import time
@@ -13,6 +14,15 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from server.application import LiveRecallApplication
+
+
+@dataclass(slots=True)
+class QueueEntry:
+    """One unsent provisional, with named fields instead of tuple positions."""
+    segment: int
+    raw: str
+    size: int
+    enqueued_at: float
 
 
 class ClientSession:
@@ -28,7 +38,7 @@ class ClientSession:
         # Reference to shared final history
         self.history = history
         # This client's pending provisional captions, waiting to be sent
-        self.outgoing_queue = deque()
+        self.outgoing_queue: deque[QueueEntry] = deque()
         # Total size in bytes of provisionals currently in the queue
         self.outgoing_bytes = 0
         # Signal that wakes the sender when new work arrives.
@@ -91,21 +101,21 @@ class ClientSession:
     def compact(self):
         latest = {}
         for entry in self.outgoing_queue:
-            segment = entry[0]
+            segment = entry.segment
             if segment > self.history.latest_segment_id:
                 latest[segment] = entry
         self.outgoing_queue = deque(latest.values())
-        self.outgoing_bytes = sum(entry[2] for entry in self.outgoing_queue)
+        self.outgoing_bytes = sum(entry.size for entry in self.outgoing_queue)
         if not self.outgoing_queue:
             self.provisional_wait_started = None
         elif self.provisional_wait_started is None:
-            self.provisional_wait_started = min(entry[3] for entry in self.outgoing_queue)
+            self.provisional_wait_started = min(entry.enqueued_at for entry in self.outgoing_queue)
 
     # What signals congestion
     def update_pressure(self, now):
         if not self.policy.semantic_backpressure:
             return
-        oldest_age = now - self.outgoing_queue[0][3] if self.outgoing_queue else 0.0
+        oldest_age = now - self.outgoing_queue[0].enqueued_at if self.outgoing_queue else 0.0
         in_flight_age = now - self.send_started if self.send_started is not None else 0.0
         buffered = self.transport_bytes()
         final_lag = self.history.next_sequence - self.next_final
@@ -152,15 +162,16 @@ class ClientSession:
                 self.enter_congestion(now)
             if self.congested:
                 self.compact()
-                retained = deque(e for e in self.outgoing_queue if e[0] != message["segment"])
+                retained = deque(entry for entry in self.outgoing_queue
+                                 if entry.segment != message["segment"])
                 self.outgoing_queue = retained
-                self.outgoing_bytes = sum(e[2] for e in retained)
+                self.outgoing_bytes = sum(entry.size for entry in retained)
             if (len(self.outgoing_queue) >= self.policy.max_pending or
                     self.outgoing_bytes + size > self.policy.max_pending_bytes):
                 self.failure = "Latest provisional exceeds client queue capacity"
             else:
-                # If not congested, enqueue the provisional
-                self.outgoing_queue.append((message["segment"], raw, size, now))
+                # Enqueue the latest provisional if it fits within the hard limits
+                self.outgoing_queue.append(QueueEntry(message["segment"], raw, size, now))
                 self.outgoing_bytes += size
                 if self.congested and self.provisional_wait_started is None:
                     self.provisional_wait_started = now
@@ -259,16 +270,16 @@ class ClientSession:
                 final = self.history.get_entry(self.next_final)
                 # Checks if is send a provisional
                 if self.outgoing_queue and (final is None or
-                        self.outgoing_queue[0][0] <= final.caption.segment_id):
+                        self.outgoing_queue[0].segment <= final.caption.segment_id):
                     if self.congested:
                         now = time.monotonic()
                         quiet_window = max(self.policy.lag_seconds, min(
                             1.0, 2 * (self.update_interval or 0.0)))
                         started = self.provisional_wait_started
                         if started is None:
-                            started = self.outgoing_queue[0][3]
+                            started = self.outgoing_queue[0].enqueued_at
                         remaining = min(
-                            quiet_window - (now - self.outgoing_queue[0][3]),
+                            quiet_window - (now - self.outgoing_queue[0].enqueued_at),
                             self.policy.max_provisional_delay - (now - started))
                         if remaining > 0:
                             self.ready.clear()
@@ -277,11 +288,11 @@ class ClientSession:
                             except asyncio.TimeoutError:
                                 pass
                             continue
-                    _, raw, size, _ = self.outgoing_queue.popleft()
-                    self.outgoing_bytes -= size
+                    entry = self.outgoing_queue.popleft()
+                    self.outgoing_bytes -= entry.size
                     if not self.outgoing_queue:
                         self.provisional_wait_started = None
-                    await self.send(raw)
+                    await self.send(entry.raw)
                 # Checks if is send a final
                 elif final is not None:
                     await self.send(final.raw)

@@ -149,6 +149,8 @@ For each workload, files such as `t1_run01.csv` and `t1_run01.json` are written 
 
 A delivered final can be complete but late. Slow/offline populations can lower freshness; suppression of obsolete provisionals can lower overall revision coverage. Inspect healthy clients separately in T3. WebSocket uses TCP, so packet loss usually adds retransmission/head-of-line delay rather than exposing unordered or missing TCP bytes to the application. Report medians across independent runs, and retain individual runs so a median does not hide misses.
 
+The group also provides optional benchmark wrappers and result consolidation under [benchmarks/README.md](benchmarks/README.md). These invoke the same school runner; the direct commands above remain available.
+
 ## 4. Saved evidence and before/after comparison
 
 - [Latest cleanup-code Ubuntu rerun: T1–T4](results/cleanup_recheck_20261103/SUMMARY.md): three runs each, all with 100% final completeness. T1/T2 also achieved 100% freshness and revision coverage; healthy-client freshness in T3 was 100%.

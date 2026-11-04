@@ -34,6 +34,7 @@ Thumbs.db
 /demo_results*.json
 /results/*
 !/results/final/
+!/results/stage*
 !/results/cleanup_recheck_20261103/
 /.validation-work/
 /dist/
