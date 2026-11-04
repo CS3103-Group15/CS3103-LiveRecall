@@ -329,6 +329,23 @@ class ClientSession:
 
     # Checks if the client is able to receive more work using ping/pong feedback
     async def delivery_checkpoint(self, size=0) -> None:
+        """Periodically measure WebSocket transport progress using ping and pong.
+        
+        Count successfully sent messages and bytes. When either the adaptive
+        message batch `feedback_batch_size()` or byte threshold `feedback_threshold()`
+        is reached, send a WebSocket ping and measure the time until its matching pong is received.
+
+        The first successful checkpoint establishes the connection's baseline
+        round-trip time. Later checkpoints are compared with a threshold derived
+        from that baseline. One severely delayed checkpoint or two consecutive
+        mildly delayed checkpoints place the client in congestion mode, extend
+        its recovery hold and compact obsolete provisional updates.
+
+        Ping/pong feedback shows that the remote WebSocket implementation remains
+        responsive. It does not prove that the browser application has already
+        rendered or otherwise processed preceding caption messages.
+        """
+
         if not self.policy.semantic_backpressure or not callable(getattr(self.websocket, "ping", None)):
             return
         self.feedback.messages += 1
