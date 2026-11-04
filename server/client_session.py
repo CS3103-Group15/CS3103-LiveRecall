@@ -313,10 +313,18 @@ class ClientSession:
         return max(self.policy.slow_send_seconds, 4 * (self.feedback.baseline or 0.0))
 
     def feedback_batch_size(self) -> int:
-        if self.feedback.baseline is None:
+        """Calculate how many message can be send between ping/pong checkpoint"""
+        if self.feedback.baseline is None: # before RTT baseline exist, use the configured starting batch size
             return self.policy.feedback_window
+
+        # use the estimate time between caption updates. If estimate doesnt exist yet, fallback to `lag_second`
         interval = self.update_interval or self.policy.lag_seconds
+
+        # needed batch size = ceil(2xbaseline / update_interval)
+        # So that a high latency but healthy connection can send a small batch rather than waiting for pong for every message
         needed = math.ceil(2 * self.feedback.baseline / max(0.001, interval))
+
+        # bound the result, prevents the dynamic batch size from being too small/too large
         return max(self.policy.feedback_window, min(self.policy.max_feedback_window, needed))
 
     # Checks if the client is able to receive more work using ping/pong feedback
@@ -328,6 +336,8 @@ class ClientSession:
         if (self.feedback.messages < self.feedback_batch_size() and
                 self.feedback.bytes < self.policy.max_feedback_bytes):
             return
+
+        # reset to 0 because we will wait until ping/pong checkpoint is reached
         self.feedback.messages = 0
         self.feedback.bytes = 0
         started = time.monotonic()
