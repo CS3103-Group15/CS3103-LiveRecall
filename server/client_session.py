@@ -36,37 +36,37 @@ class ClientSession:
         # Connection used to send messages to this client
         self.websocket = websocket
         # Reference to shared final history
-        self.history = history
+        self.history: FinalHistory = history
         # This client's pending provisional captions, waiting to be sent
         self.outgoing_queue: deque[QueueEntry] = deque()
         # Total size in bytes of provisionals currently in the queue
-        self.outgoing_bytes = 0
+        self.outgoing_bytes: int = 0
         # Signal that wakes the sender when new work arrives.
         self.ready = asyncio.Event()
         # Stores a failure reason, if this session encounters an error
-        self.failure = None
+        self.failure: str | None = None
         # Holds the independent sender task once it starts
-        self.sender_task = None
+        self.sender_task: asyncio.Task | None = None
         # Prepares the initial HISTORY message and sets the next-final bookmark
         self.set_initial_history(history_items)
         # Whether this session has been stopped
-        self.stopped = False
+        self.stopped: bool = False
         # Whether congestion mode is active for this client
-        self.congested = False
+        self.congested: bool = False
          # Time when congestion pressure was last detected
         self.last_pressure = 0.0
-         # Start time of an ongoing caption send
-        self.send_started = None
+         # Start time of an ongoing caption send, `None` if not sending
+        self.send_started: float | None = None
         # Smoothed time between caption arrivals
-        self.update_interval = None
+        self.update_interval: float | None = None
         # Previous caption arrival time
-        self.last_update_at = None
+        self.last_update_at: float | None = None
         # When provisional deferral began
-        self.provisional_wait_started = None
+        self.provisional_wait_started: float | None = None
          # Counts consecutive mildly slow sends, capped at 2
-        self.slow_send_observations = 0
+        self.slow_send_observations: int = 0
         # Counts consecutive mildly slow ping/pong checks, capped at 2
-        self.slow_feedback_observations = 0
+        self.slow_feedback_observations: int = 0
 
     # Prepares the initial history snapshot for this client session's independent sender
     def set_initial_history(self, history_items):
@@ -273,30 +273,46 @@ class ClientSession:
 
     # Sender sends caption to client
     async def send(self, raw):
+        """Send one serialised message and observe delivery pressure
+        
+        After sending, measure the duration taken to send. One severely slow send or 2 consecutive mildly slow send
+        will make the client enter congestion mode and trigger provisional queue compact. A normal send reset the 
+        consecutive slow-send counter.
+
+        Finally record the message in pingpong feedback so that transport progress can be check periodically.
+        """
         started = time.monotonic()
         self.send_started = started
         try:
-            await asyncio.wait_for(self.websocket.send(raw), timeout=self.policy.send_timeout)
+            await asyncio.wait_for(self.websocket.send(raw), timeout=self.policy.send_timeout) # attempts to send but limit to send_timeout
         finally:
             self.send_started = None
         now = time.monotonic()
-        duration = now - started
+        duration = now - started # amount of time taken to send one message
         # Checks if send took longer than expected and if is sustained
         if self.policy.semantic_backpressure and duration >= self.policy.slow_send_seconds:
             self.slow_send_observations = min(2, self.slow_send_observations + 1)
+
+            # enter congestion if sending takes severely too long OR we have seen 2 consecutive mildly slow send
             if (duration >= max(self.policy.lag_seconds, self.policy.slow_send_seconds) or
                     self.slow_send_observations >= 2):
                 self.enter_congestion(now)
                 self.compact()
         else:
-            self.slow_send_observations = 0
+            self.slow_send_observations = 0 # no slow send, reset the consecutive slow send observation counter
+
         # Handles the ping/pong feedback mechanism
         await self.delivery_checkpoint(len(raw.encode("utf-8")))
 
     def feedback_threshold(self):
+        """Calculate how slow a ping/pong response need to be before considered as unusual
+        
+        Returns the maximum of:
+        - The fixed minimum delay `slow_send_seconds`
+        - 4x the best observed ping/pong round-trip time `feedback.baseline`."""
         return max(self.policy.slow_send_seconds, 4 * (self.feedback.baseline or 0.0))
 
-    def feedback_batch_size(self):
+    def feedback_batch_size(self) -> int:
         if self.feedback.baseline is None:
             return self.policy.feedback_window
         interval = self.update_interval or self.policy.lag_seconds
@@ -304,7 +320,7 @@ class ClientSession:
         return max(self.policy.feedback_window, min(self.policy.max_feedback_window, needed))
 
     # Checks if the client is able to receive more work using ping/pong feedback
-    async def delivery_checkpoint(self, size=0):
+    async def delivery_checkpoint(self, size=0) -> None:
         if not self.policy.semantic_backpressure or not callable(getattr(self.websocket, "ping", None)):
             return
         self.feedback.messages += 1
@@ -346,7 +362,24 @@ class ClientSession:
                 self.slow_feedback_observations = 0
 
     # Independent sender loop, delivering queued work to the client
-    async def sender_loop(self):
+    async def sender_loop(self) -> None:
+        """Send initial history, then keep sending provisional & final updates to one client
+        
+        Message ordering is based on segment IDs. A queued provisional is sent
+        before a final when its segment ID is less than or equal to the next
+        final's segment ID. Otherwise, the earlier final is sent first. Final
+        captions are retrieved using the client's next_final history cursor,
+        which is advanced only after the final has been sent successfully.
+
+        During congestion, briefly defer a provisional to give a newer revision
+        or final time to replace it. The delay ends when either the replacement
+        quiet window or the maximum total provisional-deferral period expires.
+        After every wait, recheck the queue and history because the available
+        work may have changed.
+
+        When no work is available, sleep on the ready event until enqueue() makes
+        another update available. This avoids repeatedly checking an empty queue.
+        """
         try:
             # Sends the initial history snapshot before any queued work
             await self.send(self.initial_history)
@@ -371,7 +404,8 @@ class ClientSession:
                             started = self.outgoing_queue[0].enqueued_at
                         remaining = min(
                             quiet_window - (now - self.outgoing_queue[0].enqueued_at),
-                            self.policy.max_provisional_delay - (now - started))
+                            self.policy.max_provisional_delay - (now - started)
+                        )
                         if remaining > 0:
                             self.ready.clear()
                             try:
@@ -380,7 +414,8 @@ class ClientSession:
                                 pass
                             continue
 
-                    # if NOT congested OR remaining == 0, then send one provisional
+                    # Send provisional immediately in normal mode
+                    # In congestion, send the latest retained provisional once remaining <= 0 [either quiet_window expires OR maximum total deferral period (max_provisional_delay) expires]
                     entry = self.outgoing_queue.popleft()
                     self.outgoing_bytes -= entry.size
                     if not self.outgoing_queue:
