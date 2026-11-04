@@ -151,36 +151,17 @@ A delivered final can be complete but late. Slow/offline populations can lower f
 
 The group also provides optional benchmark wrappers and result consolidation under [benchmarks/README.md](benchmarks/README.md). These invoke the same school runner; the direct commands above remain available.
 
-## 4. Saved evidence and before/after comparison
+## 4. Selected group benchmark results
 
-- [Latest cleanup-code Ubuntu rerun: T1–T4](results/cleanup_recheck_20261103/SUMMARY.md): three runs each, all with 100% final completeness. T1/T2 also achieved 100% freshness and revision coverage; healthy-client freshness in T3 was 100%.
-- [Earlier full Ubuntu experiment snapshot](results/final/SUMMARY.md): T1–T5, an additional bandwidth stress experiment, and the controlled T5 optimization comparison. T5 was not rerun during the latest four-test check.
-- Each snapshot has `summary.json`, `metadata.json` and `raw_results.zip`. The archives preserve per-run CSV/JSON, commands and logs; metadata identifies the measured source by hash. Later comment-only edits do not represent new performance measurements.
-- [Earlier T5 comparison](results/final/comparison.csv): the same VM and workload were used for three runs of each sender version. Median fresh-final ratio improved from 76.00% to 85.80%, coverage from 50.44% to 62.30%, and P95 age from 941.41 ms to 763.92 ms. Median completeness was 100% for both versions. These are historical measured results, not a claim that every metric is always 100%.
+The group selected the following benchmark results for the report:
 
-### Reproduce the earlier configuration
+- [Stage 4 results](results/stage4/): recovery implementation measurements.
+- [Stage 5 results](results/stage5/): independent client delivery measurements.
+- [Stage 6 results](results/stage6/): semantic backpressure measurements.
 
-Use the complete historical server snapshot at commit `fb3e54b`. Do not swap only its `client_session.py` into the current server: helper interfaces changed during cleanup.
+Each stage contains T1–T4 results and T5 network-profile results. Test folders contain individual CSV/JSON runs, a benchmark log, and `summary.md` / `summary.json` with per-run results and medians. Use these selected measurements for stage comparisons; the superseded alternative result snapshots have been removed.
 
-For a Git checkout with that commit available, install Git if needed (`sudo apt install -y git`), then run from the project root:
-
-```bash
-PROJECT_ROOT="$PWD"
-PROJECT_PYTHON="$PWD/.venv/bin/python"
-BEFORE_DIR=$(mktemp -d /tmp/liverecall-before-XXXXXX)
-git archive fb3e54b solution_server.py requirements.txt server caption_source.py sample_transcript.txt run_demo.py load_clients.py analyse_results.py network_profiles | tar -x -C "$BEFORE_DIR"
-mkdir -p results/manual
-sudo -v
-(
-    set -e
-    trap 'sudo bash "$PROJECT_ROOT/network_profiles/reset.sh" lo' EXIT
-    sudo bash network_profiles/delay_loss.sh lo
-    "$PROJECT_PYTHON" "$BEFORE_DIR/run_demo.py" --clients 100 --duration 40 --runs 3 --port 19877 --output-stem "$PROJECT_ROOT/results/manual/before_t5"
-    python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/manual/after_t5
-)
-```
-
-For a ZIP without Git history, obtain the earlier snapshot from the [group repository](https://github.com/CS3103-Group15/CS3103-LiveRecall) at that commit first. Keep dependencies, machine and workload settings identical for both configurations. New results may differ from historical results because scheduling and loss are variable; preserve the new raw measurements rather than substituting old numbers.
+See [benchmark instructions](benchmarks/README.md) to reproduce the workloads. Keep the machine, dependencies and workload settings consistent when comparing implementations. New measurements may vary with scheduling and packet loss; retain their raw output separately from the selected evidence.
 
 ## 5. Implementation and limits
 

@@ -6,7 +6,7 @@ OpenAI ChatGPT/Codex was used to explain the assignment and code, develop/refact
 
 ## Useful suggestion and verification
 
-Independent client sender tasks prevent one blocked socket from holding up publication to healthy clients. Shared final history with a per-client bookmark avoids copying a final backlog into every provisional queue. Ubuntu T1–T5 runs and memory observations provide measurement evidence; see `results/final/`.
+Independent client sender tasks prevent one blocked socket from holding up publication to healthy clients. Shared final history with a per-client bookmark avoids copying a final backlog into every provisional queue. The group’s selected benchmark evidence is retained under `results/stage4/`, `results/stage5/` and `results/stage6/`.
 
 ## Generated suggestion/code that required modification
 

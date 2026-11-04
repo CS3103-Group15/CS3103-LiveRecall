@@ -29,12 +29,10 @@ Thumbs.db
 *.swp
 *~
 
-# Ad-hoc experiments; keep the canonical results/final files only
+# Ad-hoc experiments; keep the selected group stage results
 /demo_results*.csv
 /demo_results*.json
 /results/*
-!/results/final/
 !/results/stage*
-!/results/cleanup_recheck_20261103/
 /.validation-work/
 /dist/
