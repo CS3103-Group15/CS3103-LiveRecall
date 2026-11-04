@@ -5,9 +5,9 @@ Independent runs: 3
 | Metric | bandwidth_2mbit_run01.json | bandwidth_2mbit_run02.json | bandwidth_2mbit_run03.json | Median |
 |---|---:|---:|---:|---:|
 | Clients observed (count) | 100 | 100 | 100 | **100** |
-| P50 caption age (ms) | 7.06 | 7.06 | 7.26 | **7.06** |
-| P95 caption age (ms) | 31.29 | 31.57 | 31.97 | **31.57** |
-| P99 caption age (ms) | 38.59 | 39.24 | 38.95 | **38.95** |
+| P50 caption age (ms) | 77.19 | 69.06 | 73.62 | **73.62** |
+| P95 caption age (ms) | 90.31 | 85.12 | 89.02 | **89.02** |
+| P99 caption age (ms) | 94.29 | 92.20 | 93.67 | **93.67** |
 | Fresh Caption Ratio (%) | 100.00 | 100.00 | 100.00 | **100.00** |
 | Fresh Final Caption Ratio (%) | 100.00 | 100.00 | 100.00 | **100.00** |
 | Final-caption completeness (%) | 100.00 | 100.00 | 100.00 | **100.00** |
@@ -15,7 +15,7 @@ Independent runs: 3
 | Duplicate messages (count) | 0 | 0 | 0 | **0** |
 | Stale messages (count) | 0 | 0 | 0 | **0** |
 | Connection errors (count) | 0 | 0 | 0 | **0** |
-| Normal-client P95 (ms) | 31.29 | 31.57 | 31.97 | **31.57** |
+| Normal-client P95 (ms) | 90.31 | 85.12 | 89.02 | **89.02** |
 | Normal-client freshness (%) | 100.00 | 100.00 | 100.00 | **100.00** |
 | Slow-client P95 (ms) | — | — | — | **—** |
 | Slow-client freshness (%) | — | — | — | **—** |

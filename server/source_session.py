@@ -9,6 +9,14 @@ ProcessUpdate = Callable[[dict[str, Any]], Awaitable[CaptionSegment | None]]
 
 async def handle_source(websocket, hello: dict[str, Any],
                         process_update: ProcessUpdate) -> None:
+    """Starting point of source update.
+    Decode incoming text from websocket into json and invoke the `process_update` application callback.
+    If a session limit is exceeded, it terminates the connection gracefully.
+    
+    Args:
+        process_update: Callback to application.process_source_update
+    """
+    
     print(f"source connected: session={hello.get('session')}", flush=True)
     try:
         # Waits for messages from caption source

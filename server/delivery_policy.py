@@ -56,5 +56,5 @@ class FeedbackState:
     bytes: int = 0
     messages: int = 0
     started: float | None = None
-    baseline: float | None = None
+    baseline: float | None = None # the best observed ping/pong RTT
     hold_until: float = 0.0

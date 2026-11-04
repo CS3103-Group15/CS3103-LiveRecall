@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T01:28:38.493817+00:00",
+  "generated_at": "2026-11-04T07:33:50.698484+00:00",
   "run_count": 3,
   "run_files": [
     "bandwidth_2mbit_run01.json",
@@ -23,36 +23,36 @@
       "label": "P50 caption age",
       "unit": "ms",
       "values": [
-        15.0015,
-        16.1035,
-        15.288
+        44.53,
+        44.010999999999996,
+        45.028999999999996
       ],
       "observed_runs": 3,
-      "median": 15.288,
+      "median": 44.53,
       "decimals": 2
     },
     "p95_ms": {
       "label": "P95 caption age",
       "unit": "ms",
       "values": [
-        46.4315,
-        48.32975,
-        47.45925
+        71.91079999999998,
+        68.40719999999995,
+        76.42814999999999
       ],
       "observed_runs": 3,
-      "median": 47.45925,
+      "median": 71.91079999999998,
       "decimals": 2
     },
     "p99_ms": {
       "label": "P99 caption age",
       "unit": "ms",
       "values": [
-        52.92225,
-        54.67870000000002,
-        53.271
+        103.70640000000003,
+        111.73740000000004,
+        134.64483000000004
       ],
       "observed_runs": 3,
-      "median": 53.271,
+      "median": 111.73740000000004,
       "decimals": 2
     },
     "fresh_pct": {
@@ -95,12 +95,12 @@
       "label": "Normal Update Coverage",
       "unit": "%",
       "values": [
-        99.15646258503402,
-        99.0204081632653,
-        98.8843537414966
+        100.0,
+        100.0,
+        100.0
       ],
       "observed_runs": 3,
-      "median": 99.0204081632653,
+      "median": 100.0,
       "decimals": 2
     },
     "duplicates": {
@@ -143,12 +143,12 @@
       "label": "Normal-client P95",
       "unit": "ms",
       "values": [
-        46.4315,
-        48.32975,
-        47.45925
+        71.91079999999998,
+        68.40719999999995,
+        76.42814999999999
       ],
       "observed_runs": 3,
-      "median": 47.45925,
+      "median": 71.91079999999998,
       "decimals": 2
     },
     "normal_clients.fresh_pct": {

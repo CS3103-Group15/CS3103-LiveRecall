@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T16:24:12.572649+00:00",
+  "generated_at": "2026-11-04T07:53:55.505042+00:00",
   "run_count": 3,
   "run_files": [
     "t4_run01.json",
@@ -23,36 +23,36 @@
       "label": "P50 caption age",
       "unit": "ms",
       "values": [
-        6.62,
-        6.1865000000000006,
-        6.273
+        38.659499999999994,
+        38.3675,
+        38.489000000000004
       ],
       "observed_runs": 3,
-      "median": 6.273,
+      "median": 38.489000000000004,
       "decimals": 2
     },
     "p95_ms": {
       "label": "P95 caption age",
       "unit": "ms",
       "values": [
-        11.28505,
-        8.26305,
-        8.189
+        54.5072,
+        54.10605,
+        52.8437
       ],
       "observed_runs": 3,
-      "median": 8.26305,
+      "median": 54.10605,
       "decimals": 2
     },
     "p99_ms": {
       "label": "P99 caption age",
       "unit": "ms",
       "values": [
-        16.502340000000018,
-        9.852009999999998,
-        9.429019999999998
+        58.150109999999984,
+        58.33905999999999,
+        56.33425000000003
       ],
       "observed_runs": 3,
-      "median": 9.852009999999998,
+      "median": 58.150109999999984,
       "decimals": 2
     },
     "fresh_pct": {
@@ -95,9 +95,9 @@
       "label": "Normal Update Coverage",
       "unit": "%",
       "values": [
-        98.33333333333333,
         98.24561403508773,
-        98.24561403508773
+        98.24561403508773,
+        98.26315789473684
       ],
       "observed_runs": 3,
       "median": 98.24561403508773,
@@ -143,12 +143,12 @@
       "label": "Normal-client P95",
       "unit": "ms",
       "values": [
-        11.28505,
-        8.26305,
-        8.189
+        54.5072,
+        54.10605,
+        52.8437
       ],
       "observed_runs": 3,
-      "median": 8.26305,
+      "median": 54.10605,
       "decimals": 2
     },
     "normal_clients.fresh_pct": {
@@ -191,24 +191,24 @@
       "label": "Recovery P50",
       "unit": "ms",
       "values": [
-        2.9010000000000002,
-        1.9015,
-        3.9185
+        78.087,
+        61.826499999999996,
+        67.1875
       ],
       "observed_runs": 3,
-      "median": 2.9010000000000002,
+      "median": 67.1875,
       "decimals": 2
     },
     "recovery_p95_ms": {
       "label": "Recovery P95",
       "unit": "ms",
       "values": [
-        3.9154,
-        4.59455,
-        5.9098
+        97.63315,
+        82.04855,
+        77.59115000000003
       ],
       "observed_runs": 3,
-      "median": 4.59455,
+      "median": 82.04855,
       "decimals": 2
     }
   }

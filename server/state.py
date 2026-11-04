@@ -33,7 +33,14 @@ class CaptionState:
 
     def accept_update(self, message:dict[str, Any],
                       store_final: Callable[[CaptionSegment], None] | None = None) -> CaptionSegment | None:
-        caption_update = self.parse_update(message)
+        """Parse the source update, check if the source update is valid, update the final history and update the
+        caption state (self.active, self.highest_finalized_segment).
+        
+        If new segment is final, then store it in history before committing the state so that when
+        capacity failure, client will still make the new segment retryable because it is already inside
+        final history.
+        """
+        caption_update = self.parse_update(message)  # parse the raw message and return a CaptionSegment object
 
         if caption_update is None:
             return None
@@ -50,14 +57,17 @@ class CaptionState:
             # Store before committing state so capacity failures leave it retryable.
             if store_final is not None:
                 store_final(caption_update)
-            self.highest_finalized_segment = caption_update.segment_id
-            self.active.pop(caption_update.segment_id, None)
+            self.highest_finalized_segment = caption_update.segment_id # commit state
+            self.active.pop(caption_update.segment_id, None) # commit state
         else:
+            # if new segment is provisional, then set the latest active provisional segment
             self.active[caption_update.segment_id] = caption_update
 
         return caption_update
 
     def parse_update(self, message:dict[str, Any]) -> CaptionSegment | None:
+        """Parse the message dict object into `CaptionSegment` object"""
+
         if message.get("type") != "CAPTION_UPDATE":
             return None
 
