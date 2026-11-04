@@ -348,24 +348,27 @@ class ClientSession:
 
         if not self.policy.semantic_backpressure or not callable(getattr(self.websocket, "ping", None)):
             return
+        
         self.feedback.messages += 1
         self.feedback.bytes += size
+        # returns only if both values remain below their thresholds
         if (self.feedback.messages < self.feedback_batch_size() and
                 self.feedback.bytes < self.policy.max_feedback_bytes):
             return
 
-        # reset to 0 because we will wait until ping/pong checkpoint is reached
+        # starts a new counting window for messages sent after this checkpoint.
         self.feedback.messages = 0
         self.feedback.bytes = 0
         started = time.monotonic()
-        self.feedback.started = started
+        self.feedback.started = started # record when the feedback checkpoint began
         # Ping the client and wait for pong
         try:
             pong = await asyncio.wait_for(self.websocket.ping(), timeout=self.policy.send_timeout)
             await asyncio.wait_for(asyncio.shield(pong), timeout=self.policy.send_timeout)
         finally:
             self.feedback.started = None
-        elapsed = time.monotonic() - started
+
+        elapsed = time.monotonic() - started # calc the ping pong RTT
         # Establish a baseline for ping/pong RTT
         previous_baseline = self.feedback.baseline
         if previous_baseline is None:
@@ -373,7 +376,10 @@ class ClientSession:
         else:
             threshold = self.feedback_threshold()
             self.feedback.baseline = min(previous_baseline, elapsed)
-            # If RTT slow check if is sustained
+
+            # confirms congestion if:
+            # one checkpoint is severely slow > max(lag_second, threshold) OR
+            # 2 consecutive checkpoint are mildly slow
             if elapsed >= threshold:
                 self.slow_feedback_observations = min(2, self.slow_feedback_observations + 1)
                 # Compact if congested by removing old provisionals
@@ -386,7 +392,7 @@ class ClientSession:
                         now + min(60.0, max(self.policy.recovery_seconds, 16 * elapsed)))
                     self.compact()
             else:
-                self.slow_feedback_observations = 0
+                self.slow_feedback_observations = 0 # not slow feedback, reset
 
     # Independent sender loop, delivering queued work to the client
     async def sender_loop(self) -> None:
@@ -488,6 +494,9 @@ class ClientSession:
 
 
 def parse_client_hello(hello:dict[str, Any]) -> tuple[int, int, int]:
+    """Parse client hello message and returns the last segment, last revision 
+    and history seconds on client's end
+    """
     last_segment = hello.get("last_segment")
     last_revision = hello.get("last_revision")
     history_seconds = hello.get("history_seconds")
