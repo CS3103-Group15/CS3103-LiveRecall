@@ -2,7 +2,7 @@
 
 LiveRecall displays live lecture captions and lets students review recent completed sentences. The deterministic caption source sends revisions to a WebSocket server, which delivers them to browser clients. Each browser replaces older revisions, stores recent finals locally and recovers missing recent finals after reconnecting.
 
-## 1. Environment and dependencies
+## 1. Environment & Dependencies
 
 Use Ubuntu for networking/performance experiments. A full Ubuntu VM, including the Mininet lab VM, is suitable. Run the server, caption source and simulated clients inside the same Ubuntu environment.
 
@@ -18,9 +18,9 @@ python -m pip install -r requirements.txt
 
 Activate `.venv` in every new terminal used below.
 
-## 2. Run the application
+## 2. Run the Application
 
-### Terminal 1: caption server
+### Terminal 1: Caption Server
 
 ```bash
 source .venv/bin/activate
@@ -29,7 +29,7 @@ python solution_server.py --port 8765
 
 The required evaluation entry point is `python solution_server.py --port <port>`. The server listens on the specified port and binds to `0.0.0.0` so browsers on the host computer can reach a VM.
 
-### Terminal 2: website server
+### Terminal 2: Website Server
 
 ```bash
 source .venv/bin/activate
@@ -40,7 +40,7 @@ Open `http://127.0.0.1:8000` in a browser on the same machine. If the servers ru
 
 Port 8000 serves the website while port 8765 carries caption WebSocket connections. Do not open port 8765 as a normal webpage. Each browser tab is an independent client. The browser connects to the hostname serving its page on port 8765. Automated clients use the port passed to the test runner.
 
-### Terminal 3: deterministic caption source
+### Terminal 3: Deterministic Caption Source
 
 Open the browser tabs first, then run:
 
@@ -51,7 +51,7 @@ python caption_source.py --duration 12
 
 This generates captions for about 12 seconds. For a longer demonstration of recall and reconnect recovery, use `python caption_source.py --duration 120`. These commands are for the interactive demo; use the public test commands below for performance measurements.
 
-### Browser behavior and demo checks
+### Browser Behavior & Demo Checks
 
 - Provisional captions are gray/italic while finals are green. New revisions update the same segment's row.
 - “What did I miss?” displays the previous 30 seconds of finalized captions. The 15- and 60-second buttons select those windows. Normal recall reads browser-local history without a server request.
@@ -64,7 +64,7 @@ Stop terminal processes with Ctrl+C. Before repeating a lecture whose segment nu
 
 If a browser shows an older version of the page after switching project copies, use a hard refresh. Browser caches are shared by pages using the same host and port.
 
-## 3. Reproduce the public experiments
+## 3. Reproduce the Public Experiments
 
 Do not launch a separate caption server or source for these commands: `run_demo.py` manages both and the simulated clients. Run one workload at a time inside Ubuntu, using an unused port. Each command performs three independent runs and prints medians. The supplied source, load clients, runner and analyser are unchanged.
 
@@ -73,31 +73,31 @@ source .venv/bin/activate
 mkdir -p results/manual
 ```
 
-### T1: basic correctness, 20 clients
+### T1: Basic Correctness, 20 clients
 
 ```bash
 python run_demo.py --clients 20 --duration 20 --runs 3 --port 19877 --output-stem results/manual/t1
 ```
 
-### T2: normal operation, 100 clients
+### T2: Normal Operation, 100 clients
 
 ```bash
 python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/manual/t2
 ```
 
-### T3: slow-reader isolation
+### T3: Slow-Reader Isolation
 
 ```bash
 python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --slow-percent 10 --slow-ms 500 --output-stem results/manual/t3
 ```
 
-### T4: disconnect/reconnect recovery
+### T4: Disconnect/Reconnect Recovery
 
 ```bash
 python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --disconnect-percent 20 --disconnect-at 15 --disconnect-seconds 5 --output-stem results/manual/t4
 ```
 
-### T5: Ubuntu delay, jitter and packet loss
+### T5: Ubuntu Delay, Jitter & Packet Loss
 
 The supplied profile applies 120 ms delay, 30 ms jitter and 3% packet loss. The following subshell resets the profile on exit, including after a test failure:
 
@@ -119,7 +119,7 @@ sudo bash network_profiles/reset.sh lo
 
 For each workload, files such as `t1_run01.csv` and `t1_run01.json` are written under the chosen output directory. Use a separate output stem/directory for subsequent experiments so saved evidence is not overwritten. The runner prints the per-run results and median summary.
 
-### Understanding the results
+### Understanding the Results
 
 | Metric                    | Meaning                                                                                              |
 | ------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -132,7 +132,7 @@ For each workload, files such as `t1_run01.csv` and `t1_run01.json` are written 
 | Recovery time             | Reconnect-to-HISTORY response timing; check completeness too, because an empty response can be fast. |
 | Slow-reader isolation     | Healthy-client latency/freshness while another population reads slowly.                              |
 
-### Optional group benchmark scripts
+### Optional Group Benchmark Scripts
 
 These included scripts apply the same public workloads using the supplied `run_demo.py`, without changing its measurement logic, and generate per-run and median summaries.
 
@@ -156,11 +156,10 @@ PROFILE=bandwidth_2mbit PYTHON_BIN=python RUNS=3 RESULT_STAGE=bandwidth_reproduc
 
 T5 applies each profile to the Ubuntu loopback interface (`lo`), runs 100 clients for 40 seconds three times, then resets the profile. The bandwidth profile limits shared loopback traffic to 2 Mbit/s, not each individual client. Network configuration requires `sudo`; enter the Ubuntu password if prompted. Results are saved under `results/<stage>/t5/<profile>/`. Use a new stage name to preserve previous measurements. See [benchmark instructions](benchmarks/README.md) for further options.
 
-## 4. Selected group benchmark results
+## 4. Selected Group Benchmark Results
 
 The group selected the following benchmark results for the report:
 
-- [Stage 4 results](results/stage4/): recovery implementation measurements.
 - [Stage 5 results](results/stage5/): independent client delivery measurements.
 - [Stage 6 results](results/stage6/): semantic backpressure measurements.
 
@@ -168,13 +167,13 @@ Each stage contains T1–T4 results and T5 network-profile results. Test folders
 
 See [benchmark instructions](benchmarks/README.md) to reproduce the workloads. Keep the machine, dependencies and workload settings consistent when comparing implementations. New measurements may vary with scheduling and packet loss; retain their raw output separately from the selected evidence.
 
-### Before/after comparison
+### Before/After Comparison
 
 Use the saved stage measurements for the report’s implementation-stage comparison. For a new controlled comparison, test the corresponding earlier source snapshot and the current source on the same Ubuntu VM with identical dependencies, workloads, profiles and run counts. Preserve raw CSV/JSON for each version and report medians.
 
 The current server also supports `python solution_server.py --port 8765 --disable-backpressure` for a separately managed comparison: independent senders remain enabled, while semantic coalescing and feedback are disabled. `run_demo.py` starts its own server and does not forward this option. Normal startup enables backpressure.
 
-## 5. Implementation and limits
+## 5. Implementation & Limits
 
 | File                                 | Responsibility                                                                                 |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -193,7 +192,7 @@ The initial `SOURCE_HELLO`/`CLIENT_HELLO` identifies the connection. Accepted so
 
 Each client queues only provisionals. Finals remain once in shared history and are read through that client's `next_final` bookmark. It advances after successful sending; it is separate from the browser checkpoint, which records the last final actually accepted by the browser.
 
-| Resource / behavior                    | Default limit or policy                                                                                                                |
+| Resource / Behavior                    | Default Limit or Policy                                                                                                                |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Server final history                   | 70 seconds after storage; at most 20,000 finals / 32 MiB of serialized payload.                                                        |
 | Per-client provisional queue           | At most 256 entries / 1 MiB of queued payload.                                                                                         |
