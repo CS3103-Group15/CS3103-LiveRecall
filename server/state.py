@@ -26,8 +26,10 @@ class CaptionSegment:
 class CaptionState:
     def __init__(self, session:str):
         self.session = session
-        self.active: dict[int, CaptionSegment] = {} # Latest provisional caption for each active segment
-        self.highest_finalized_segment = 0 # Largest finalized segment ID
+        # Latest provisional caption for each active segment
+        self.active: dict[int, CaptionSegment] = {}
+        # Largest finalized segment ID
+        self.highest_finalized_segment = 0
 
     def accept_update(self, message:dict[str, Any],
                       store_final: Callable[[CaptionSegment], None] | None = None) -> CaptionSegment | None:
@@ -95,4 +97,4 @@ class CaptionState:
             final=final,
             text=text
         )
-    
+

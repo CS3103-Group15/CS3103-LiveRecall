@@ -63,6 +63,7 @@ class LiveRecallApplication:
             await asyncio.sleep(0)
         return accepted
 
+    # Registers a new client session and sends it the recent finalized captions from shared history
     async def attach_client(self, client: ClientSession, last_segment: int,
                             last_revision: int, history_seconds: int) -> None:
         async with self._lock:
