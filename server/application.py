@@ -53,6 +53,17 @@ class LiveRecallApplication:
 
     # Processes a caption coming from the source
     async def process_source_update(self, message: dict[str, Any]) -> CaptionSegment | None:
+        """Process an incoming source update, persist it, then broadcast it to all client session
+        using delivery_hub
+        Use asyncio.Lock to prevent race condition in caption state and delivery hub as they are shared
+        between client sessions
+        Returns:
+            CaptionSegment | None: The parsed and saved `CaptionSegment` object if the 
+                update was valid and successfully stored; `None` if the message was rejected.
+        Raises:
+            OverflowError: If delivery_hub.publish() faces issues
+        """
+        
         async with self._lock:
             # Uses details from CaptionState to determine if caption received is old or duplicate or alr finalized segement, if accepted caption is a final, it is added to the shared final history
             accepted = self.caption_state.accept_update(message, self.final_history.add)
