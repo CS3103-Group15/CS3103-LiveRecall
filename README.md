@@ -6,7 +6,7 @@ LiveRecall displays live lecture captions and lets students review recent comple
 
 Use Ubuntu for networking/performance experiments. A full Ubuntu VM, including the Mininet lab VM, is suitable. Run the server, caption source and simulated clients inside the same Ubuntu environment.
 
-Tested environment: Ubuntu 24.04, Python 3.12, ARM64 VMware VM with 4 vCPUs and 4 GiB RAM. Python's `venv` and `iproute2` are needed. The only mandatory third-party Python dependency is `websockets`, as declared in `requirements.txt`. Server startup needs no cloud services, database, credentials, model downloads or interactive input.
+Tested environment: Ubuntu 14.04 LTS (Mininet VM), Python 3.10. Python's `venv` and `iproute2` are needed. The only mandatory third-party Python dependency is `websockets`, as declared in `requirements.txt`. Server startup needs no cloud services, database, credentials, model downloads or interactive input.
 
 ```bash
 sudo apt update
@@ -160,7 +160,6 @@ T5 applies each profile to the Ubuntu loopback interface (`lo`), runs 100 client
 
 The group selected the following benchmark results for the report:
 
-- [Stage 4 results](results/stage4/): recovery implementation measurements.
 - [Stage 5 results](results/stage5/): independent client delivery measurements.
 - [Stage 6 results](results/stage6/): semantic backpressure measurements.
 
