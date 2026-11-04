@@ -5,18 +5,18 @@ Independent runs: 3
 | Metric | delay_loss_run01.json | delay_loss_run02.json | delay_loss_run03.json | Median |
 |---|---:|---:|---:|---:|
 | Clients observed (count) | 100 | 100 | 100 | **100** |
-| P50 caption age (ms) | 254.96 | 266.71 | 257.74 | **257.74** |
-| P95 caption age (ms) | 695.50 | 796.30 | 752.06 | **752.06** |
-| P99 caption age (ms) | 964.07 | 1097.42 | 1122.64 | **1097.42** |
-| Fresh Caption Ratio (%) | 86.36 | 84.77 | 88.24 | **86.36** |
-| Fresh Final Caption Ratio (%) | 85.88 | 80.18 | 85.29 | **85.29** |
+| P50 caption age (ms) | 277.81 | 275.36 | 287.27 | **277.81** |
+| P95 caption age (ms) | 799.48 | 726.81 | 957.48 | **799.48** |
+| P99 caption age (ms) | 1168.05 | 1105.50 | 1291.79 | **1168.05** |
+| Fresh Caption Ratio (%) | 88.47 | 89.68 | 80.07 | **88.47** |
+| Fresh Final Caption Ratio (%) | 90.78 | 89.65 | 80.88 | **89.65** |
 | Final-caption completeness (%) | 100.00 | 100.00 | 100.00 | **100.00** |
-| Normal Update Coverage (%) | 99.85 | 99.97 | 100.00 | **99.97** |
+| Normal Update Coverage (%) | 100.00 | 99.91 | 99.99 | **99.99** |
 | Duplicate messages (count) | 0 | 0 | 0 | **0** |
 | Stale messages (count) | 0 | 0 | 0 | **0** |
 | Connection errors (count) | 0 | 0 | 0 | **0** |
-| Normal-client P95 (ms) | 695.50 | 796.30 | 752.06 | **752.06** |
-| Normal-client freshness (%) | 86.36 | 84.77 | 88.24 | **86.36** |
+| Normal-client P95 (ms) | 799.48 | 726.81 | 957.48 | **799.48** |
+| Normal-client freshness (%) | 88.47 | 89.68 | 80.07 | **88.47** |
 | Slow-client P95 (ms) | — | — | — | **—** |
 | Slow-client freshness (%) | — | — | — | **—** |
 | Recovery P50 (ms) | — | — | — | **—** |

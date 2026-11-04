@@ -9,9 +9,9 @@
   "invalid_history_nonfinal": 0,
   "connections": 100,
   "connection_errors": 0,
-  "p50_ms": 6.2,
-  "p95_ms": 2253.13235,
-  "p99_ms": 24021.82527,
+  "p50_ms": 38.5925,
+  "p95_ms": 2315.485,
+  "p99_ms": 24227.6548,
   "fresh_pct": 94.65437788018433,
   "fresh_final_pct": 90.0,
   "fresh_final_count": 6840,
@@ -24,14 +24,14 @@
   "normal_update_coverage_pct": 95.17543859649123,
   "normal_clients": {
     "messages": 20520,
-    "p50_ms": 6.121,
-    "p95_ms": 7.985049999999999,
+    "p50_ms": 37.846,
+    "p95_ms": 52.25605,
     "fresh_pct": 100.0
   },
   "slow_clients": {
     "messages": 1180,
-    "p50_ms": 14712.5455,
-    "p95_ms": 28074.796000000002,
+    "p50_ms": 14875.0945,
+    "p95_ms": 28298.7256,
     "fresh_pct": 1.694915254237288
   }
 }

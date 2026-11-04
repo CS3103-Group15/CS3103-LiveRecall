@@ -13,79 +13,79 @@ Clients=100, duration=40.0s, source segments=49
 LiveRecall Results
 ==================
 Clients observed:              100
-Live caption messages:         9462
-Recovered history items:       0
-Accepted messages:             9462
-Recovered messages:            0
+Live caption messages:         8770
+Recovered history items:       3
+Accepted messages:             8770
+Recovered messages:            3
 Duplicate messages observed:   0
 Stale messages observed:       0
-P50 caption age:               265.58 ms
-P95 caption age:               781.80 ms
-P99 caption age:               1084.45 ms
-Fresh Caption Ratio (<=500 ms): 84.68%
-Fresh Final Caption Ratio (<=500 ms): 84.39%
+P50 caption age:               294.23 ms
+P95 caption age:               884.95 ms
+P99 caption age:               1236.57 ms
+Fresh Caption Ratio (<=500 ms): 81.71%
+Fresh Final Caption Ratio (<=500 ms): 82.67%
 Successful connections:        100
 Connection errors:             0
 Unique final captions:         4900/4900
 Final-caption completeness:    100.00%
-Unique live revisions:         9462/14700
-Normal Update Coverage:        64.37%
+Unique live revisions:         8770/14700
+Normal Update Coverage:        59.66%
 
 === Run 2/3 ===
 Clients=100, duration=40.0s, source segments=49
 LiveRecall Results
 ==================
 Clients observed:              100
-Live caption messages:         8732
-Recovered history items:       1
-Accepted messages:             8732
-Recovered messages:            1
+Live caption messages:         8527
+Recovered history items:       0
+Accepted messages:             8527
+Recovered messages:            0
 Duplicate messages observed:   0
 Stale messages observed:       0
-P50 caption age:               267.30 ms
-P95 caption age:               655.03 ms
-P99 caption age:               889.61 ms
-Fresh Caption Ratio (<=500 ms): 91.70%
-Fresh Final Caption Ratio (<=500 ms): 89.78%
+P50 caption age:               294.72 ms
+P95 caption age:               1022.61 ms
+P99 caption age:               1377.09 ms
+Fresh Caption Ratio (<=500 ms): 79.34%
+Fresh Final Caption Ratio (<=500 ms): 78.67%
 Successful connections:        100
 Connection errors:             0
 Unique final captions:         4900/4900
 Final-caption completeness:    100.00%
-Unique live revisions:         8732/14700
-Normal Update Coverage:        59.40%
+Unique live revisions:         8527/14700
+Normal Update Coverage:        58.01%
 
 === Run 3/3 ===
 Clients=100, duration=40.0s, source segments=49
 LiveRecall Results
 ==================
 Clients observed:              100
-Live caption messages:         8798
+Live caption messages:         8544
 Recovered history items:       0
-Accepted messages:             8798
+Accepted messages:             8544
 Recovered messages:            0
 Duplicate messages observed:   0
 Stale messages observed:       0
-P50 caption age:               265.12 ms
-P95 caption age:               686.42 ms
-P99 caption age:               962.60 ms
-Fresh Caption Ratio (<=500 ms): 88.82%
-Fresh Final Caption Ratio (<=500 ms): 88.20%
+P50 caption age:               288.45 ms
+P95 caption age:               961.98 ms
+P99 caption age:               1249.81 ms
+Fresh Caption Ratio (<=500 ms): 82.24%
+Fresh Final Caption Ratio (<=500 ms): 81.76%
 Successful connections:        100
 Connection errors:             0
 Unique final captions:         4900/4900
 Final-caption completeness:    100.00%
-Unique live revisions:         8798/14700
-Normal Update Coverage:        59.85%
+Unique live revisions:         8544/14700
+Normal Update Coverage:        58.12%
 
 === Median across independent runs ===
-P50 caption age                   265.58 ms
-P95 caption age                   686.42 ms
-P99 caption age                   962.60 ms
-Fresh Caption Ratio                88.82 %
-Fresh Final Caption Ratio          88.20 %
+P50 caption age                   294.23 ms
+P95 caption age                   961.98 ms
+P99 caption age                  1249.81 ms
+Fresh Caption Ratio                81.71 %
+Fresh Final Caption Ratio          81.76 %
 Final completeness                100.00 %
-Normal Update Coverage             59.85 %
-Normal-client P95                 686.42 ms
+Normal Update Coverage             58.12 %
+Normal-client P95                 961.98 ms
 
 Public run complete. CSV and JSON result files were written beside run_demo.py.
 Consolidated JSON: results/t5/delay_loss/summary.json
