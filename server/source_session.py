@@ -2,15 +2,16 @@
 import json
 from typing import Any, Awaitable, Callable
 
-from server.state import CaptionSegment, CaptionState
+from server.state import CaptionSegment
 
 ProcessUpdate = Callable[[dict[str, Any]], Awaitable[CaptionSegment | None]]
 
 
 async def handle_source(websocket, hello: dict[str, Any],
-                        process_update: ProcessUpdate, caption_state: CaptionState) -> None:
+                        process_update: ProcessUpdate) -> None:
     print(f"source connected: session={hello.get('session')}", flush=True)
     try:
+        # Waits for messages from caption source
         async for raw in websocket:
             try:
                 message = json.loads(raw)
@@ -18,6 +19,7 @@ async def handle_source(websocket, hello: dict[str, Any],
                 continue
             if not isinstance(message, dict):
                 continue
+            # If is caption, process the update and publish to clients
             if message.get("type") == "CAPTION_UPDATE":
                 try:
                     await process_update(message)
@@ -25,7 +27,6 @@ async def handle_source(websocket, hello: dict[str, Any],
                     await websocket.close(code=1013, reason="Final history capacity exhausted")
                     return
             elif message.get("type") == "SOURCE_DONE":
-                print(f"source finished: accepted={caption_state.accepted_count}; "
-                      f"rejected={caption_state.rejected_count}", flush=True)
+                print("source finished", flush=True)
     finally:
         print("source disconnected", flush=True)

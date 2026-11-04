@@ -35,5 +35,6 @@ Thumbs.db
 /results/*
 !/results/final/
 !/results/stage*
+!/results/cleanup_recheck_20261103/
 /.validation-work/
 /dist/

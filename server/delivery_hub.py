@@ -14,17 +14,15 @@ class DeliveryHub:
         return len(self.client_list)
 
     def register_client(self, new_client: ClientSession) -> None:
-        if new_client.is_closed:
+        if new_client.stopped:
             raise ValueError("Cannot register a closed client session")
         self.client_list.add(new_client)
 
     def unregister_client(self, client: ClientSession) -> None:
         self.client_list.discard(client)
 
+    # Publish caption to all client sessions
     def publish(self, caption_update_msg: CaptionUpdateMessage) -> None:
         raw = json.dumps(caption_update_msg)
         for client in tuple(self.client_list):
-            # enqueue records failure and wakes the client's own sender, which
-            # closes on failure. Keep registration until detach cleans it up;
-            # never silently unregister an otherwise connected client.
             client.enqueue(caption_update_msg, raw)

@@ -1,183 +1,242 @@
-# LiveRecall — CS3103 Group 15
+# LiveRecall — CS3103 Assignment 4, Group 15
 
-LiveRecall distributes revision-based lecture captions to students. Each browser displays the newest text, keeps recent final captions locally, and reconnects with a final-caption checkpoint to recover missed context.
+LiveRecall displays live lecture captions and lets students review recent completed sentences. The deterministic caption source sends revisions to a WebSocket server, which delivers them to browser clients. Each browser replaces older revisions, stores recent finals locally and recovers missing recent finals after reconnecting.
 
-## Start here
+## 1. Environment and dependencies
 
-- **Run the application:** the commands below.
-- **Read the final measurements:** [results/final/SUMMARY.md](results/final/SUMMARY.md).
-- **Inspect the technical report:** [report.pdf](report.pdf).
-- **Prepare the required demo:** [docs/DEMO_CHECKLIST.md](docs/DEMO_CHECKLIST.md).
-- **Team declarations:** [AI_USAGE.md](AI_USAGE.md) and [CONTRIBUTIONS.md](CONTRIBUTIONS.md). Contribution names/percentages must be confirmed by the team before submission.
+Use Ubuntu for networking/performance experiments. A full Ubuntu VM, including the Mininet lab VM, is suitable; Mininet itself does not need to run. Run the server, caption source and simulated clients inside the same Ubuntu environment. Network impairment is applied to its loopback interface (`lo`).
 
-The current permanent Ubuntu project is `/home/mininet/CS3103-LiveRecall` in the existing VMware Mininet VM. Mininet itself does not have to run: the server and simulated clients run directly inside Ubuntu, and impairment is applied to `lo`.
+Tested environment: Ubuntu 24.04, Python 3.12, ARM64 VMware VM with 4 vCPUs and 4 GiB RAM. Python's `venv` and `iproute2` are needed. The only mandatory third-party Python dependency is `websockets`, as declared in `requirements.txt`. Server startup needs no cloud services, database, credentials, model downloads or interactive input.
 
-## Ubuntu setup
+From the submitted project's root directory:
 
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip iproute2
-cd ~/CS3103-LiveRecall
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-`requirements.txt` contains the mandatory server dependency only. There are no cloud APIs, databases, model downloads or interactive startup prompts. The supplied school source, runner, clients, analyser and impairment scripts are unchanged.
-
-## Application demo — three terminals inside Ubuntu
-
-Terminal 1:
+For the team's existing Mininet VM, the project is at `/home/mininet/CS3103-LiveRecall`. After logging in, use:
 
 ```bash
 cd ~/CS3103-LiveRecall
+source .venv/bin/activate
+```
+
+Activate `.venv` in every terminal used below.
+
+## 2. Run the application
+
+### Terminal 1: caption server
+
+```bash
 source .venv/bin/activate
 python solution_server.py --port 8765
 ```
 
-Terminal 2:
+The required evaluation entry point is `python solution_server.py --port <port>`. The server listens on the specified port and binds to `0.0.0.0` so browsers on the host computer can reach a VM.
+
+### Terminal 2: website server
 
 ```bash
-cd ~/CS3103-LiveRecall
 source .venv/bin/activate
 python -m http.server 8000 --bind 0.0.0.0 --directory client
 ```
 
-Open two browser tabs at `http://<VM-IP>:8000` from your Mac, or `http://127.0.0.1:8000` from a browser inside Ubuntu. The browser connects to the hostname serving the page on WebSocket port 8765. Find the VM IP with `hostname -I` inside Ubuntu; its current address may change after reboot.
+Open `http://127.0.0.1:8000` in a browser on the same machine. If the servers run inside Ubuntu and the browser runs on your Mac/Windows host, find the VM's IP using `hostname -I`, then open `http://<VM-IP>:8000` instead.
 
-Terminal 3, after the browser tabs have connected:
+Port 8000 serves the website; port 8765 carries caption WebSocket connections. Do not open port 8765 as a normal webpage. Each browser tab is an independent client. The browser connects to the hostname serving its page on port 8765; if changing the caption server's port for an interactive demo, also change `WS_URL` in `client/app.js`. Automated clients use the port passed to the test runner.
+
+### Terminal 3: deterministic caption source
+
+Open the browser tabs first, then run:
 
 ```bash
-cd ~/CS3103-LiveRecall
 source .venv/bin/activate
 python caption_source.py --uri ws://127.0.0.1:8765 --segments 100
 ```
 
-Gray italic text is provisional; green text is final. Revisions replace one line. “What did I miss?” opens the local 30-second view; 15- and 60-second buttons change the window. A late join or reconnect receives ordered missed finals before new live updates. Live display uses a 15-second window; local final retention is 70 seconds.
+For a slower, easier-to-follow visual demonstration:
 
-For a repeatable second lecture/demo, restart the server and reload the browser tabs before restarting a source whose segment numbers begin again at 1. The assignment assumes one source/session at a time.
+```bash
+python caption_source.py --uri ws://127.0.0.1:8765 --segments 40 --revision-delay 1 --segment-gap 1
+```
 
-## Reproducible Ubuntu performance experiments
+These are interactive demo settings only; use the unchanged public workloads below for reported performance results.
 
-Do not start a separate server for `run_demo.py`; it starts and stops its own server/source/clients. Port 19877 avoids clashes with the visual demo on 8765.
+### Browser behavior and demo checks
+
+- Provisional captions are gray/italic; finals are green. New revisions update the same segment's row.
+- “What did I miss?” displays the previous 30 seconds of finalized captions. The 15- and 60-second buttons select those windows. Normal recall reads browser-local history without a server request.
+- Each tab keeps 70 seconds of local finals, while the live area displays a 15-second window.
+- To demonstrate recovery, temporarily disconnect one tab using the browser developer tools' Network “Offline” setting, wait a few seconds while another tab continues receiving captions, then return it to “Online”. Keep the page open. Its status changes and it reconnects automatically, reporting its last accepted final checkpoint.
+- Open another tab after the source has been running to demonstrate late joining. Recent recovered finals can appear in live display if sufficiently recent, and in recall if inside its selected window.
+- Refreshing or closing a tab clears its in-memory caption history/checkpoint. A fresh tab requests recent context from the server.
+
+Stop terminal processes with Ctrl+C. Before repeating a lecture whose segment numbers restart at 1, restart the caption server and reload browser tabs. The mandatory path supports one active source and session `L1`.
+
+If a browser shows an older version of the page after switching project copies, use a hard refresh. Browser caches are shared by pages using the same host and port.
+
+## 3. Reproduce the public experiments
+
+Do not launch a separate caption server or source for these commands: `run_demo.py` manages both and the simulated clients. Run one workload at a time inside Ubuntu, using an unused port. Each command performs three independent runs and prints medians. The supplied source, load clients, runner and analyser are unchanged.
 
 ```bash
 source .venv/bin/activate
-sudo -v
-python tools/run_public_tests.py --extended
+mkdir -p results/manual
 ```
 
-The wrapper invokes the unchanged school harness, runs every required test three times, resets network impairment in `finally`, and writes one canonical `results/final/` set. `--extended` adds a separately labelled 512 kbit/s bandwidth experiment; it is not a sixth required public test. Run inside the same Ubuntu VM for all components. Close unrelated benchmarks first. Refresh `sudo -v` before starting; the profile commands need sudo.
-
-Equivalent required public workloads:
+### T1: basic correctness, 20 clients
 
 ```bash
-python run_demo.py --clients 20 --duration 20 --runs 3 --port 19877 --output-stem results/t1
-python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/t2
-python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --slow-percent 10 --slow-ms 500 --output-stem results/t3
-python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --disconnect-percent 20 --disconnect-at 15 --disconnect-seconds 5 --output-stem results/t4
-sudo bash network_profiles/delay_loss.sh lo
-python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/t5
+python run_demo.py --clients 20 --duration 20 --runs 3 --port 19877 --output-stem results/manual/t1
+```
+
+### T2: normal operation, 100 clients
+
+```bash
+python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/manual/t2
+```
+
+### T3: slow-reader isolation
+
+```bash
+python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --slow-percent 10 --slow-ms 500 --output-stem results/manual/t3
+```
+
+### T4: disconnect/reconnect recovery
+
+```bash
+python run_demo.py --clients 100 --duration 60 --runs 3 --port 19877 --disconnect-percent 20 --disconnect-at 15 --disconnect-seconds 5 --output-stem results/manual/t4
+```
+
+### T5: Ubuntu delay, jitter and packet loss
+
+The supplied profile applies 120 ms delay, 30 ms jitter and 3% packet loss. The following subshell resets the profile on exit, including after a test failure:
+
+```bash
+sudo -v
+(
+    set -e
+    trap 'sudo bash network_profiles/reset.sh lo' EXIT
+    sudo bash network_profiles/delay_loss.sh lo
+    python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/manual/t5
+)
+```
+
+If a terminal is forcibly closed during impairment testing, explicitly reset the interface before other tests:
+
+```bash
 sudo bash network_profiles/reset.sh lo
 ```
 
-Always reset the profile even if a manual test fails. For the final report, use the canonical wrapper results rather than mixing manually generated files with earlier runs. Its raw archive includes all per-run CSV/JSON, exact commands/hashes, profiles, resource samples and logs. `comparison.csv` compares the previous sender with the final sender on the same VM/filesystem and T5 settings. Rerunning the wrapper updates the final suite but does not recreate that historical baseline automatically.
+For each workload, files such as `t1_run01.csv` and `t1_run01.json` are written under the chosen output directory. Use a separate output stem/directory for subsequent experiments so saved evidence is not overwritten. The runner prints the per-run results and median summary.
 
-## Checks
+### Understanding the results
+
+| Metric | Meaning |
+|---|---|
+| Caption Age | Client receive time minus the caption's source timestamp. |
+| P50 / P95 / P99 age | Median, tail and extreme-tail delivery latency. |
+| Final completeness | Unique required finals received divided by finals expected across clients. |
+| Fresh Caption Ratio | Fraction of received updates arriving within 500 ms by default. |
+| Fresh Final Caption Ratio | Fraction of generated required finals received within that threshold. |
+| Normal Update Coverage | Fraction of generated live revisions received; unconstrained clients should receive all revisions. |
+| Recovery time | Reconnect-to-HISTORY response timing; check completeness too, because an empty response can be fast. |
+| Slow-reader isolation | Healthy-client latency/freshness while another population reads slowly. |
+
+A delivered final can be complete but late. Slow/offline populations can lower freshness; suppression of obsolete provisionals can lower overall revision coverage. Inspect healthy clients separately in T3. WebSocket uses TCP, so packet loss usually adds retransmission/head-of-line delay rather than exposing unordered or missing TCP bytes to the application. Report medians across independent runs, and retain individual runs so a median does not hide misses.
+
+The group also provides optional benchmark wrappers and result consolidation under [benchmarks/README.md](benchmarks/README.md). These invoke the same school runner; the direct commands above remain available.
+
+## 4. Saved evidence and before/after comparison
+
+- [Latest cleanup-code Ubuntu rerun: T1–T4](results/cleanup_recheck_20261103/SUMMARY.md): three runs each, all with 100% final completeness. T1/T2 also achieved 100% freshness and revision coverage; healthy-client freshness in T3 was 100%.
+- [Earlier full Ubuntu experiment snapshot](results/final/SUMMARY.md): T1–T5, an additional bandwidth stress experiment, and the controlled T5 optimization comparison. T5 was not rerun during the latest four-test check.
+- Each snapshot has `summary.json`, `metadata.json` and `raw_results.zip`. The archives preserve per-run CSV/JSON, commands and logs; metadata identifies the measured source by hash. Later comment-only edits do not represent new performance measurements.
+- [Earlier T5 comparison](results/final/comparison.csv): the same VM and workload were used for three runs of each sender version. Median fresh-final ratio improved from 76.00% to 85.80%, coverage from 50.44% to 62.30%, and P95 age from 941.41 ms to 763.92 ms. Median completeness was 100% for both versions. These are historical measured results, not a claim that every metric is always 100%.
+
+### Reproduce the earlier configuration
+
+Use the complete historical server snapshot at commit `fb3e54b`. Do not swap only its `client_session.py` into the current server: helper interfaces changed during cleanup.
+
+For a Git checkout with that commit available, install Git if needed (`sudo apt install -y git`), then run from the project root:
 
 ```bash
-python -m unittest discover -s tests -v
+PROJECT_ROOT="$PWD"
+PROJECT_PYTHON="$PWD/.venv/bin/python"
+BEFORE_DIR=$(mktemp -d /tmp/liverecall-before-XXXXXX)
+git archive fb3e54b solution_server.py requirements.txt server caption_source.py sample_transcript.txt run_demo.py load_clients.py analyse_results.py network_profiles | tar -x -C "$BEFORE_DIR"
+mkdir -p results/manual
+sudo -v
+(
+    set -e
+    trap 'sudo bash "$PROJECT_ROOT/network_profiles/reset.sh" lo' EXIT
+    sudo bash network_profiles/delay_loss.sh lo
+    "$PROJECT_PYTHON" "$BEFORE_DIR/run_demo.py" --clients 100 --duration 40 --runs 3 --port 19877 --output-stem "$PROJECT_ROOT/results/manual/before_t5"
+    python run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --output-stem results/manual/after_t5
+)
+```
+
+For a ZIP without Git history, obtain the earlier snapshot from the [group repository](https://github.com/CS3103-Group15/CS3103-LiveRecall) at that commit first. Keep dependencies, machine and workload settings identical for both configurations. New results may differ from historical results because scheduling and loss are variable; preserve the new raw measurements rather than substituting old numbers.
+
+## 5. Implementation and limits
+
+| File | Responsibility |
+|---|---|
+| `solution_server.py` | Required CLI; starts the application on the selected port. |
+| `server/application.py` | Shared application state, connection routing, caption processing and atomic client attachment. |
+| `server/source_session.py` | Reads source messages and delegates accepted-update processing. |
+| `server/state.py` | Validates fields/session, rejects stale/duplicate updates and protects finalized segments. |
+| `server/history.py` | Shared bounded final history, recovery selection and sequence-based bookmark lookup. |
+| `server/delivery_hub.py` | Registers sessions and publishes work without awaiting client sockets. |
+| `server/client_session.py` | Independent sender, provisional queue, ordered finals, compaction, feedback and cleanup. |
+| `server/delivery_policy.py` | Fixed delivery settings and per-client mutable ping/pong progress. |
+| `server/protocol.py` | Required message type definitions. |
+| `client/index.html`, `client/app.js` | Caption display, local recall, checkpoint reporting and automatic reconnect. |
+
+The initial `SOURCE_HELLO`/`CLIENT_HELLO` identifies the connection. Accepted source updates are published only after state/history processing. Extra source fields are ignored; no fixed revision count is assumed. Initial `HISTORY`, bookmark capture and registration are prepared together, and the sender sends history before live updates.
+
+Each client queues only provisionals. Finals remain once in shared history and are read through that client's `next_final` bookmark. It advances after successful sending; it is separate from the browser checkpoint, which records the last final actually accepted by the browser.
+
+| Resource / behavior | Default limit or policy |
+|---|---|
+| Server final history | 70 seconds after storage; at most 20,000 finals / 32 MiB of serialized payload. |
+| Per-client provisional queue | At most 256 entries / 1 MiB of queued payload. |
+| Congestion handling | Compact superseded provisionals; retain the latest queued unfinished revision. Finals are not discarded to make room for provisionals. |
+| Provisional deferral during congestion | Cadence-based quiet window, normally 250 ms–1 s; voluntary deferral capped at 2 s. Network stalls can add delay. |
+| Feedback pipeline | Adaptive batch of 1–8 messages, with a 64 KiB byte threshold checked after each message. |
+| Caption send / ping write / pong wait | 10-second timeout per awaited operation. |
+| Congestion recovery | Requires drained work, low buffer pressure and a quiet period; confirmed slow feedback can hold coalescing for up to 60 s. |
+
+Pressure checks consider queue entries/bytes/age, send duration, transport buffers, final lag and feedback RTT relative to the connection's baseline. Ping/pong confirms transport progress, not browser rendering or application acceptance. Already transmitted messages cannot be removed by queue compaction. Conservative recovery can delay restoration of full provisional coverage after a temporary bottleneck.
+
+Expired history is not an unlimited recovery guarantee. If a connected sender falls behind retained finals, the connection closes rather than silently skipping them; a reconnect can request remaining recent context. If history hits its item/byte cap before entries can expire, the source connection is closed explicitly rather than silently discarding finals inside the retention window. Capacity must be sufficient for the intended 60-second workload.
+
+Optional ASR, multiple concurrent sessions, authentication and production TLS termination are outside this implementation. Public-test results do not guarantee hidden-test marks.
+
+## 6. Submission checks and deliverables
+
+Check the mandatory entry point:
+
+```bash
 python submission_check.py --port 19878
+```
+
+When all required documents are present:
+
+```bash
 python submission_check.py --final --port 19878
 ```
 
-Optional browser-state unit tests, if Node.js is available on a development machine:
+The checker validates required filenames and startup, not full protocol/performance correctness or the content of declarations.
 
-```bash
-node --test tests/client.test.cjs
-```
+Required submission contents are the application source (`solution_server.py`, `server/`, `client/`), `requirements.txt`, this README, [AI_USAGE.md](AI_USAGE.md), [CONTRIBUTIONS.md](CONTRIBUTIONS.md), and `report.pdf` (4–5 pages excluding references/appendices). Keep the supplied deterministic source, transcript, unchanged test programs and network profiles for reproduction. Retain the group Git history and experiment evidence for the report/viva. Exclude generated virtual environments, Python caches and model weights from the submission ZIP.
 
-Node.js is not needed to install or run the submitted server/browser application. `submission_check.py --final` checks file presence/startup, not the truth of team declarations or completion of the video/viva.
+Current outstanding submission items:
 
-## Code and protocol flow
-
-`solution_server.py` calls `server/application.py::run_server`. The application routes `SOURCE_HELLO` to `source_session.py` and `CLIENT_HELLO` to `client_session.py`.
-
-Accepted source revisions pass through `state.py`. Duplicate/stale revisions and revisions after a final are rejected. Finals are committed to `history.py` before publication. Unrecognized extra source fields are ignored. The implementation does not assume three revisions per segment.
-
-`delivery_hub.py` publishes accepted updates to registered sessions without waiting for sockets. Each session has an independent sender and a bounded provisional queue. Finals exist once in shared history; a per-session `next_final` sequence bookmark tracks the next final to send. Initial `HISTORY`, bookmark capture and registration happen atomically, and history is sent before live work.
-
-The browser checkpoint describes the last final the browser actually accepted. It differs from the server delivery bookmark, which tracks sending progress. The checkpoint survives a WebSocket reconnect in the same page; a page reload starts fresh and requests recent history.
-
-### Bounds and overload policy
-
-- Shared final history: 70 seconds, at most 20,000 finals / 32 MiB. It is not an unlimited lecture transcript.
-- Per-session provisional queue: at most 256 entries / 1 MiB.
-- Pressure signals: queue length/bytes, queued age, send duration, transport write buffer, final lag and delayed feedback relative to the connection's best RTT. Severe lag defaults to 250 ms; two consecutive mild slow-send/feedback observations also confirm pressure, while an isolated short scheduling hiccup does not immediately trigger coalescing.
-- Congested queues drop obsolete provisionals, preserve the latest active revision and preserve every retained final. A cadence-aware provisional replacement window (250 ms to 1 s) lets newer work supersede unsent revisions; a 2 s cap on voluntary deferral prevents continuous revisions from starving the latest update once the sender can transmit. Finals wake the sender immediately.
-- Ping/pong checkpoints bound transport progress. Fast links retain tight one-message feedback; higher baseline RTTs allow a cadence-aware batch, capped at eight messages, with a 64 KiB byte threshold that triggers a check after the current message (so it can overshoot by one message). Ping/send waits have timeouts and failures close only the affected connection.
-- Recovery uses high/low thresholds and a quiet interval. After a large feedback delay, conservative coalescing may continue for up to 60 seconds. This helps avoid repeated overload but can delay restoration of full provisional coverage after a temporary bottleneck.
-
-A pong is transport feedback, not an application/display acknowledgement. Already transmitted revisions cannot be retracted. If a client falls behind the retained history, the connection is closed rather than silently skipping finals or growing memory forever. This bounded-retention limit must be considered when interpreting long outages.
-
-## Interpretation and remaining team work
-
-Completeness and freshness are different: a final may arrive correctly but later than 500 ms. Slow readers, offline periods and packet loss can lower freshness. Under overload, obsolete provisional suppression lowers overall revision coverage intentionally; unconstrained T1/T2 and healthy-client isolation must still be checked. TCP loss causes retransmission/head-of-line delay and finite-window tail misses, not ordinary unordered WebSocket delivery.
-
-Public-test success does not guarantee hidden workload marks. The team must review the report/declarations, agree contribution percentages, record the required 5–7 minute demo and attend the viva. Optional ASR is outside this mandatory implementation.
-
-## Rebuilding the report (optional development dependency)
-
-The submitted PDF is already built. To regenerate it after updating the measured final results:
-
-```bash
-python -m pip install reportlab
-python tools/build_report.py
-```
-
-ReportLab is a report-authoring dependency, not a dependency of the required server startup path. Review the PDF visually and keep it to 4–5 pages before submission.
-
-## Create the group ZIP
-
-```bash
-python tools/package_submission.py
-```
-
-The packager excludes Git metadata, environments, caches and ad-hoc experiments. It checks required files and refuses to call an unfinished contribution statement ready. While team details are deferred, use `--allow-team-draft` to create an explicitly labelled review package. Complete the team agreement and record the separate required video before final submission.
-
-To audit the saved results without rerunning networking tests:
-
-```bash
-python tools/verify_results.py
-```
-
-This reruns the original analyser on the archived CSVs, checks the JSON summaries and measured source hashes, and checks full unconstrained revision coverage. It reports low-completeness workloads honestly rather than replacing them with a median.
-
-### Rechecking without mixing published evidence
-
-The final folder is a published snapshot. For another complete run, keep it intact and use a separate scratch output:
-
-```bash
-sudo -v
-python tools/run_public_tests.py --extended --output /tmp/liverecall-recheck
-```
-
-Use a fresh scratch directory for a repeat after an interrupted run. Do not combine partial files or carry a historical comparison across different machines/dependency versions. Review a new result set before replacing the published one.
-
-### Reproduce the controlled T5 baseline
-
-The raw archive contains `comparison/before_client_session.py`, the exact earlier sender. This is measurement provenance, not an alternative production server. To reconstruct that configuration without editing the submitted source or school programs:
-
-```bash
-TASK_ROOT="$PWD"
-BEFORE_DIR=$(mktemp -d /tmp/liverecall-before-XXXXXX)
-cp solution_server.py run_demo.py load_clients.py analyse_results.py caption_source.py sample_transcript.txt "$BEFORE_DIR/"
-cp -R server network_profiles "$BEFORE_DIR/"
-python -c 'import zipfile,sys; sys.stdout.buffer.write(zipfile.ZipFile("results/final/raw_results.zip").read("comparison/before_client_session.py"))' > "$BEFORE_DIR/server/client_session.py"
-sudo -v
-sudo bash network_profiles/delay_loss.sh lo
-(cd "$BEFORE_DIR" && "$TASK_ROOT/.venv/bin/python" run_demo.py --clients 100 --duration 40 --runs 3 --port 19877 --quiet-server --output-stem before_t5)
-sudo bash network_profiles/reset.sh lo
-```
-
-Repeat the same T5 command from the current project for the after configuration, with a fresh scratch output stem. Always reset impairment if interrupted. Report the median of three independent runs on the same VM/filesystem; retain the before/after configuration hashes. Temporary copies are not included in the submission ZIP.
+- `report.pdf` was deliberately removed during cleanup and must be restored before submission. It must cover architecture/protocol, revision/recovery, overload policy, repeated public experiments, a before/after comparison, required metrics, failures/trade-offs, limitations and future work.
+- `CONTRIBUTIONS.md` is still a draft: the team must agree named responsibilities and percentages totaling 100%. Review `AI_USAGE.md` as a team too.
+- Submit the required 5–7-minute deterministic-source demo video and attend the individual technical viva as instructed by the course. Their completion is separate from the code and file-presence checks.
