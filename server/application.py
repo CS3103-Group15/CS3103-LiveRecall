@@ -61,7 +61,7 @@ class LiveRecallApplication:
             CaptionSegment | None: The parsed and saved `CaptionSegment` object if the 
                 update was valid and successfully stored; `None` if the message was rejected.
         Raises:
-            OverflowError: If final_history.add() faces issues
+            OverflowError: If final_history.add() causes final history capacity exhausted
         """
 
         async with self._lock:
