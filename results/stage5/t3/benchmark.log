@@ -1,12 +1,12 @@
 Starting 100 clients; slow=10, disconnecting=0, late=0
 SOURCE_DONE: emitted 76 finalized segments
-Results written to /media/sf_CS3103-LiveRecall/results/stage5/t3/t3_run01.csv
+Results written to /media/sf_CS3103-LiveRecall/results/mininet_stage5/t3/t3_run01.csv
 Starting 100 clients; slow=10, disconnecting=0, late=0
 SOURCE_DONE: emitted 76 finalized segments
-Results written to /media/sf_CS3103-LiveRecall/results/stage5/t3/t3_run02.csv
+Results written to /media/sf_CS3103-LiveRecall/results/mininet_stage5/t3/t3_run02.csv
 Starting 100 clients; slow=10, disconnecting=0, late=0
 SOURCE_DONE: emitted 76 finalized segments
-Results written to /media/sf_CS3103-LiveRecall/results/stage5/t3/t3_run03.csv
+Results written to /media/sf_CS3103-LiveRecall/results/mininet_stage5/t3/t3_run03.csv
 
 === Run 1/3 ===
 Clients=100, duration=60.0s, source segments=76
@@ -19,9 +19,9 @@ Accepted messages:             21700
 Recovered messages:            0
 Duplicate messages observed:   0
 Stale messages observed:       0
-P50 caption age:               6.25 ms
-P95 caption age:               2258.74 ms
-P99 caption age:               24013.62 ms
+P50 caption age:               38.75 ms
+P95 caption age:               2315.18 ms
+P99 caption age:               24208.54 ms
 Fresh Caption Ratio (<=500 ms): 94.65%
 Fresh Final Caption Ratio (<=500 ms): 90.00%
 Successful connections:        100
@@ -33,8 +33,8 @@ Normal Update Coverage:        95.18%
 
 Slow-reader isolation
 ---------------------
-Normal clients: P50=6.17 ms, P95=8.18 ms, Fresh=100.00% (20520 msgs)
-Slow clients:   P50=14716.16 ms, P95=28061.30 ms, Fresh=1.69% (1180 msgs)
+Normal clients: P50=37.91 ms, P95=51.72 ms, Fresh=100.00% (20520 msgs)
+Slow clients:   P50=14821.50 ms, P95=28217.70 ms, Fresh=1.69% (1180 msgs)
 
 === Run 2/3 ===
 Clients=100, duration=60.0s, source segments=76
@@ -47,9 +47,9 @@ Accepted messages:             21700
 Recovered messages:            0
 Duplicate messages observed:   0
 Stale messages observed:       0
-P50 caption age:               6.20 ms
-P95 caption age:               2253.13 ms
-P99 caption age:               24021.83 ms
+P50 caption age:               38.59 ms
+P95 caption age:               2315.49 ms
+P99 caption age:               24227.65 ms
 Fresh Caption Ratio (<=500 ms): 94.65%
 Fresh Final Caption Ratio (<=500 ms): 90.00%
 Successful connections:        100
@@ -61,8 +61,8 @@ Normal Update Coverage:        95.18%
 
 Slow-reader isolation
 ---------------------
-Normal clients: P50=6.12 ms, P95=7.99 ms, Fresh=100.00% (20520 msgs)
-Slow clients:   P50=14712.55 ms, P95=28074.80 ms, Fresh=1.69% (1180 msgs)
+Normal clients: P50=37.85 ms, P95=52.26 ms, Fresh=100.00% (20520 msgs)
+Slow clients:   P50=14875.09 ms, P95=28298.73 ms, Fresh=1.69% (1180 msgs)
 
 === Run 3/3 ===
 Clients=100, duration=60.0s, source segments=76
@@ -75,9 +75,9 @@ Accepted messages:             21700
 Recovered messages:            0
 Duplicate messages observed:   0
 Stale messages observed:       0
-P50 caption age:               6.33 ms
-P95 caption age:               2255.62 ms
-P99 caption age:               24007.07 ms
+P50 caption age:               39.82 ms
+P95 caption age:               2333.24 ms
+P99 caption age:               24200.52 ms
 Fresh Caption Ratio (<=500 ms): 94.65%
 Fresh Final Caption Ratio (<=500 ms): 90.00%
 Successful connections:        100
@@ -89,20 +89,20 @@ Normal Update Coverage:        95.18%
 
 Slow-reader isolation
 ---------------------
-Normal clients: P50=6.25 ms, P95=8.58 ms, Fresh=100.00% (20520 msgs)
-Slow clients:   P50=14703.03 ms, P95=28058.04 ms, Fresh=1.69% (1180 msgs)
+Normal clients: P50=38.89 ms, P95=55.75 ms, Fresh=100.00% (20520 msgs)
+Slow clients:   P50=14841.58 ms, P95=28232.66 ms, Fresh=1.69% (1180 msgs)
 
 === Median across independent runs ===
-P50 caption age                     6.25 ms
-P95 caption age                  2255.62 ms
-P99 caption age                 24013.62 ms
+P50 caption age                    38.75 ms
+P95 caption age                  2315.49 ms
+P99 caption age                 24208.54 ms
 Fresh Caption Ratio                94.65 %
 Fresh Final Caption Ratio          90.00 %
 Final completeness                 95.13 %
 Normal Update Coverage             95.18 %
-Normal-client P95                   8.18 ms
-Slow-client P95                 28061.30 ms
+Normal-client P95                  52.26 ms
+Slow-client P95                 28232.66 ms
 
 Public run complete. CSV and JSON result files were written beside run_demo.py.
-Consolidated JSON: results/stage5/t3/summary.json
-Readable summary:  results/stage5/t3/summary.md
+Consolidated JSON: results/mininet_stage5/t3/summary.json
+Readable summary:  results/mininet_stage5/t3/summary.md

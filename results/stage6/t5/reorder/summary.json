@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T01:30:40.990492+00:00",
+  "generated_at": "2026-11-04T07:35:53.539257+00:00",
   "run_count": 3,
   "run_files": [
     "reorder_run01.json",
@@ -23,36 +23,36 @@
       "label": "P50 caption age",
       "unit": "ms",
       "values": [
-        48.5045,
-        48.897,
-        48.508
+        88.6235,
+        87.189,
+        86.75
       ],
       "observed_runs": 3,
-      "median": 48.508,
+      "median": 87.189,
       "decimals": 2
     },
     "p95_ms": {
       "label": "P95 caption age",
       "unit": "ms",
       "values": [
-        50.643,
-        51.752050000000004,
-        51.527
+        114.81089999999999,
+        110.82205,
+        112.65235
       ],
       "observed_runs": 3,
-      "median": 51.527,
+      "median": 112.65235,
       "decimals": 2
     },
     "p99_ms": {
       "label": "P99 caption age",
       "unit": "ms",
       "values": [
-        52.999030000000005,
-        53.12916,
-        54.54305
+        137.85767,
+        134.67955000000003,
+        142.3204300000001
       ],
       "observed_runs": 3,
-      "median": 53.12916,
+      "median": 137.85767,
       "decimals": 2
     },
     "fresh_pct": {
@@ -97,7 +97,7 @@
       "values": [
         100.0,
         100.0,
-        100.0
+        99.75510204081633
       ],
       "observed_runs": 3,
       "median": 100.0,
@@ -143,12 +143,12 @@
       "label": "Normal-client P95",
       "unit": "ms",
       "values": [
-        50.643,
-        51.752050000000004,
-        51.527
+        114.81089999999999,
+        110.82205,
+        112.65235
       ],
       "observed_runs": 3,
-      "median": 51.527,
+      "median": 112.65235,
       "decimals": 2
     },
     "normal_clients.fresh_pct": {
