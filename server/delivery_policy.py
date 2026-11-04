@@ -54,7 +54,7 @@ class DeliveryPolicy:
 @dataclass
 class FeedbackState:
     bytes: int = 0
-    messages: int = 0
+    messages: int = 0 # number of message being sent in a single ping/pong checkpoint
     started: float | None = None
     baseline: float | None = None # the best observed ping/pong RTT
     hold_until: float = 0.0

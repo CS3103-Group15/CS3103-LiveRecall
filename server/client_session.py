@@ -465,7 +465,9 @@ class ClientSession:
                     await self.ready.wait()
         except asyncio.CancelledError:
             raise
-        except Exception as exc:
+        except Exception as exc: 
+            # LookupError from self.history.get_entry(self.next_final) will be caught here
+            # then the client will be disconnected (cleanup_connection) and reconnect
             self.failure = str(exc) or type(exc).__name__
         finally:
             await self.cleanup_connection()

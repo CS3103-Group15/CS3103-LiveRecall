@@ -42,6 +42,11 @@ class FinalHistory:
 
     # Stores a new final while keeping history within its limits
     def add(self, caption:CaptionSegment) -> None:
+        """Add new final segment into history and remove old entries
+        
+        Raises:
+            OverflowError: If final history capacity is exhausted
+        """
         if caption.segment_id <= self.latest_segment_id:
             return
 
@@ -99,6 +104,12 @@ class FinalHistory:
 
     # Finds the next final a client sender needs, using its delivery bookmark
     def get_entry(self, sequence: int) -> FinalEntry | None:
+        """Get the history entry from the sequence number.
+        
+        Raises:
+            LookupError: If the segment with sequence number doesn't exist/has been removed
+            due to being too old.
+        """
         self.remove_old_entries()
         if sequence < self.next_sequence and sequence not in self.by_sequence:
             raise LookupError("Client fell behind retained final history")
